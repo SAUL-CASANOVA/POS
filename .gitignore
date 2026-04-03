@@ -1,0 +1,21 @@
+# --- C & Compilación ---
+/doki-doki
+*.o
+*.out
+*.exe
+
+# --- SQLite ---
+*.db
+*.db-shm
+*.db-wal
+
+# --- Editores e IDEs ---
+.vscode/
+.idea/
+*.swp
+*~
+.DS_Store
+
+# --- Dependencias y Logs ---
+node_modules/
+*.log
