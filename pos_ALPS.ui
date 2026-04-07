@@ -36,7 +36,12 @@
     </property>
     <child>
       <object class="GtkBox">
+        <property name="margin-bottom">15</property>
+        <property name="margin-end">15</property>
+        <property name="margin-start">15</property>
+        <property name="margin-top">10</property>
         <property name="orientation">vertical</property>
+        <property name="spacing">10</property>
         <child>
           <object class="GtkScrolledWindow">
             <property name="max-content-height">500</property>
@@ -45,10 +50,6 @@
             <property name="propagate-natural-height">True</property>
             <child>
               <object class="GtkColumnView" id="productos_venta">
-                <property name="margin-bottom">20</property>
-                <property name="margin-end">10</property>
-                <property name="margin-start">10</property>
-                <property name="margin-top">20</property>
                 <property name="show-column-separators">True</property>
                 <property name="show-row-separators">True</property>
                 <child>
@@ -97,10 +98,9 @@
             <property name="margin-end">10</property>
             <property name="margin-top">10</property>
             <child>
-              <object class="GtkButton">
+              <object class="GtkButton" id="btn_add_product">
                 <property name="halign">start</property>
                 <property name="label">+ Añadir producto</property>
-                <property name="margin-start">10</property>
                 <property name="valign">center</property>
               </object>
             </child>

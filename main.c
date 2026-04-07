@@ -20,6 +20,9 @@ static gboolean actualizar_reloj(gpointer user_data);
 //funcion para aplicar estilo de css al programa
 static void estilos();
 
+//funcion para abrir ventana de añadir producto
+void on_btn_abrir_buscador_clicked(GtkButton *btn, gpointer ventana_princial);
+
 int main(int argc, char **argv){
 	GtkApplication *app;
 	int status;
@@ -60,7 +63,7 @@ static void activate(GtkApplication *app, gpointer user_data){
 	GtkBuilder *builder; //builder que ayuda a obtener widgets del xml
 	GtkWidget *window; //ventana principal
 	GtkWidget *reloj; //label de fecha y hora
-
+	GtkWidget *btn_añadir; //boton de añadir productos ventana ventas
 	//crea el builder y cargar el archivo xml(.ui)
 	builder = gtk_builder_new_from_file("pos_ALPS.ui");
 
@@ -75,6 +78,12 @@ static void activate(GtkApplication *app, gpointer user_data){
 
 	//vincular ventana a la app actual
 	gtk_window_set_application(GTK_WINDOW(window), app);
+
+	//obtener el boton de agregar 
+	btn_añadir = GTK_WIDGET(gtk_builder_get_object(builder, "btn_add_product"));	
+
+	//al pulsar el boton añadir abrir la ventana del buscador
+	g_signal_connect(btn_añadir, "clicked", G_CALLBACK(on_btn_abrir_buscador_clicked), window);
 
 	//mostrar la ventana
 	gtk_window_present(GTK_WINDOW(window));
@@ -129,4 +138,20 @@ static void estilos(){
 			);
 
 	g_object_unref(provider);
+}
+
+void on_btn_abrir_buscador_clicked(GtkButton *btn, gpointer ventana_principal) {
+    GtkBuilder *builder;
+    GtkWidget *search_window;
+
+    builder = gtk_builder_new_from_file("search_product.ui");
+    search_window = GTK_WIDGET(gtk_builder_get_object(builder, "search_window"));
+
+    // Configuracion para que dependa de la ventana principal
+    gtk_window_set_transient_for(GTK_WINDOW(search_window), GTK_WINDOW(ventana_principal));
+    gtk_window_set_modal(GTK_WINDOW(search_window), TRUE);
+
+    gtk_window_present(GTK_WINDOW(search_window));
+
+    g_object_unref(builder);
 }
