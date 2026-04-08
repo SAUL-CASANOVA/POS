@@ -28,6 +28,8 @@ void on_btn_abrir_buscador_clicked(GtkButton *btn, gpointer ventana_princial);
 
 static void on_search_entry_changed(GtkEditable *editable, gpointer user_data);
 
+static void on_seleccion_producto_changed(GtkSelectionModel *model, guint position, guint n_items, gpointer user_data);
+
 int main(int argc, char **argv){
 	GtkApplication *app;
 	int status;
@@ -62,9 +64,20 @@ int main(int argc, char **argv){
 static void on_search_entry_changed(GtkEditable *editable, gpointer user_data) {
     AppData *data = (AppData *)user_data;
     const char *texto = gtk_editable_get_text(editable);
+ 
+    //recuperando el builder pegado abajo
+    GtkBuilder *builder = g_object_get_data(G_OBJECT(editable), "m_builder");
 
-    // 1. Limpiar lista actual
+    // 1. Limpiar store
     g_list_store_remove_all(data->productos_store);
+
+    if(builder){
+    //Limpiamos el entry donde el producto va a ser mostrado para que el usuario vea que agregó
+    GtkEditable *entry_sel = GTK_EDITABLE(gtk_builder_get_object(builder, "entry_producto_seleccionado"));
+    if (entry_sel) {
+        gtk_editable_set_text(entry_sel, ""); 
+    }
+    }
 
     if (strlen(texto) == 0) return;
 
@@ -188,6 +201,9 @@ void on_btn_abrir_buscador_clicked(GtkButton *btn, gpointer user_data) {
     // Recuperamos data que contiene la db y el store
     AppData *data = (AppData *)user_data;	
 
+    //limpiar el almacen de datos para que no aparezca lo anterior
+        g_list_store_remove_all(data->productos_store);
+
     GtkBuilder *builder;
     GtkWidget *search_window;
     GtkWidget *btn_cancelar_2;
@@ -202,8 +218,12 @@ void on_btn_abrir_buscador_clicked(GtkButton *btn, gpointer user_data) {
 
     //se obtiene el widget de el buscador y el columnview de añadir productos
     entry_busqueda = GTK_WIDGET(gtk_builder_get_object(builder, "search_entry"));
-
+    gtk_editable_set_text(GTK_EDITABLE(entry_busqueda), "");
     cv = GTK_COLUMN_VIEW(gtk_builder_get_object(builder, "column_view_productos"));
+
+    // Limpiar visualmente el Entry de producto seleccionado al abrir
+    GtkEditable *entry_sel = GTK_EDITABLE(gtk_builder_get_object(builder, "entry_producto_seleccionado"));
+    if (entry_sel) gtk_editable_set_text(entry_sel, "");
 
     //obtener la ventana de ventas
     GtkWindow *ventana_padre = gtk_application_get_active_window(GTK_APPLICATION(g_application_get_default()));
@@ -213,29 +233,58 @@ void on_btn_abrir_buscador_clicked(GtkButton *btn, gpointer user_data) {
         gtk_window_set_transient_for(GTK_WINDOW(search_window), ventana_padre);
     }
     gtk_window_set_modal(GTK_WINDOW(search_window), TRUE);
-    // ----------------------------------------
-
 
     // Configurar Factories (Llamada a producto.c)
     producto_configurar_columnas(builder);
 
     // Conectar el Modelo al ColumnView
     if (cv) {
-        GtkNoSelection *selection = gtk_no_selection_new(G_LIST_MODEL(data->productos_store));
-        gtk_column_view_set_model(cv, GTK_SELECTION_MODEL(selection));
-        g_object_unref(selection);
+        GtkSingleSelection *selection = gtk_single_selection_new(G_LIST_MODEL(data->productos_store));
+	
+	//asegurar que no haya nada seleccionado por defecto al abrir
+	gtk_single_selection_set_autoselect(selection, FALSE);
+        gtk_single_selection_set_can_unselect(selection, TRUE);
+        gtk_single_selection_set_selected(selection, GTK_INVALID_LIST_POSITION);
+	gtk_column_view_set_model(cv, GTK_SELECTION_MODEL(selection));
+        g_signal_connect(selection, "selection-changed", G_CALLBACK(on_seleccion_producto_changed), builder);
+       	g_object_unref(selection);
     }
 
     //Conectar señal de búsqueda
+    // Pasamos el BUILDER en lugar de DATA para que la búsqueda pueda limpiar el otro entry
     g_signal_connect(entry_busqueda, "changed", G_CALLBACK(on_search_entry_changed), data);
-
+    // Necesitamos que on_search_entry_changed tenga acceso al builder. 
+    g_object_set_data_full(G_OBJECT(entry_busqueda), "m_builder", builder, g_object_unref);
     //se utiliza para cerrar la ventana cuando se da al boton cancelar
     g_signal_connect_swapped(btn_cancelar_2, "clicked", G_CALLBACK(gtk_window_destroy), search_window);
 
     gtk_window_present(GTK_WINDOW(search_window));
-
-    g_object_unref(builder);
 }
 
+static void on_seleccion_producto_changed(GtkSelectionModel *model, guint position, guint n_items, gpointer user_data){
+    GtkBuilder *builder = (GtkBuilder *)user_data;
+  
+   //obtener seleccion real actual 
+   GtkBitset *selection = gtk_selection_model_get_selection(model);
+    
+    if (!gtk_bitset_is_empty(selection)) {
+        // Obtenemos el primer (y único) índice seleccionado
+        guint selected_pos = gtk_bitset_get_nth(selection, 0);
 
+    //Obtener el objeto seleccionado
+    ProductoObj *seleccionado = g_list_model_get_item(G_LIST_MODEL(model), selected_pos);
+    
+    if (seleccionado != NULL) {
+        //Obtener el widget donde mostraremos el nombre
+        GtkEditable *entry_nombre = GTK_EDITABLE(gtk_builder_get_object(builder, "entry_producto_seleccionado"));
+        
+        
+        if(entry_nombre){
+        // Poner el nombre del objeto en el Entry
+        gtk_editable_set_text(entry_nombre, producto_obj_get_nombre(seleccionado));
+	}
 
+        g_object_unref(seleccionado); // Importante liberar la referencia que nos dio g_list_model
+    }
+}
+}

@@ -61,7 +61,7 @@
           </object>
         </child>
         <child>
-          <object class="GtkEntry">
+          <object class="GtkEntry" id="entry_producto_seleccionado">
             <property name="can-focus">False</property>
             <property name="editable">False</property>
           </object>
