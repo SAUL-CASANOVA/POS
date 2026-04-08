@@ -32,22 +32,22 @@
             <child>
               <object class="GtkColumnView" id="column_view_productos">
                 <child>
-                  <object class="GtkColumnViewColumn">
+                  <object class="GtkColumnViewColumn" id="col_id">
                     <property name="title">ID</property>
                   </object>
                 </child>
                 <child>
-                  <object class="GtkColumnViewColumn">
+                  <object class="GtkColumnViewColumn" id="col_nombre">
                     <property name="title">Producto</property>
                   </object>
                 </child>
                 <child>
-                  <object class="GtkColumnViewColumn">
+                  <object class="GtkColumnViewColumn" id="col_precio">
                     <property name="title">Precio U.(C/IVA)</property>
                   </object>
                 </child>
                 <child>
-                  <object class="GtkColumnViewColumn">
+                  <object class="GtkColumnViewColumn" id="col_existencia">
                     <property name="title">Stock</property>
                   </object>
                 </child>

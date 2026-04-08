@@ -1,12 +1,15 @@
 #include <gtk/gtk.h>
+#include "producto.h"
 #include "database.h"
+#include <string.h>
 
 // Estructura para pasar datos a la app
 typedef struct {
     sqlite3 *db;
+    GListStore *productos_store; //Almacén de objetos ProductoObj
 } AppData;
 
-
+//PROTOTIPOS DE FUNCIONES
 
 //activar ventana principal
 static void activate(GtkApplication *app, gpointer user_data);
@@ -23,6 +26,8 @@ static void estilos();
 //funcion para abrir ventana de añadir producto
 void on_btn_abrir_buscador_clicked(GtkButton *btn, gpointer ventana_princial);
 
+static void on_search_entry_changed(GtkEditable *editable, gpointer user_data);
+
 int main(int argc, char **argv){
 	GtkApplication *app;
 	int status;
@@ -34,6 +39,9 @@ int main(int argc, char **argv){
 	//empaquetar la base de datos en la estructura
 	AppData *data = g_malloc(sizeof(AppData));
         data->db = db;
+
+	// El store se inicializará cuando se abra el buscador o en activate
+        data->productos_store = g_list_store_new(PRODUCTO_TYPE_OBJ);
 
 	app = gtk_application_new("besto.team.struct", G_APPLICATION_DEFAULT_FLAGS);
 	
@@ -50,7 +58,41 @@ int main(int argc, char **argv){
 
 }
 
+// --- CALLBACK DE BÚSQUEDA (INTEGRACIÓN SQLITE) ---
+static void on_search_entry_changed(GtkEditable *editable, gpointer user_data) {
+    AppData *data = (AppData *)user_data;
+    const char *texto = gtk_editable_get_text(editable);
 
+    // 1. Limpiar lista actual
+    g_list_store_remove_all(data->productos_store);
+
+    if (strlen(texto) == 0) return;
+
+    sqlite3_stmt *stmt;
+    // Consulta SQL usando LIKE para búsqueda parcial
+    const char *sql = "SELECT id, nombre, precio, existencia FROM productos WHERE nombre LIKE ?;";
+
+    if (sqlite3_prepare_v2(data->db, sql, -1, &stmt, NULL) == SQLITE_OK) {
+        // Formateamos el texto para SQLite: %texto%
+        char *busqueda = g_strdup_printf("%%%s%%", texto);
+        sqlite3_bind_text(stmt, 1, busqueda, -1, g_free);
+
+        while (sqlite3_step(stmt) == SQLITE_ROW) {
+            int id = sqlite3_column_int(stmt, 0);
+            const char *nombre = (const char *)sqlite3_column_text(stmt, 1);
+            double precio = sqlite3_column_double(stmt, 2);
+            int existencia = sqlite3_column_int(stmt, 3);
+
+            // Creamos el objeto con los datos reales de la DB
+            ProductoObj *p = producto_obj_new(id, nombre, precio, existencia);
+            g_list_store_append(data->productos_store, p);
+            g_object_unref(p); // El store mantiene la referencia
+        }
+        sqlite3_finalize(stmt);
+    } else {
+        g_printerr("Error en la consulta: %s\n", sqlite3_errmsg(data->db));
+    }
+}
 
 
 static void activate(GtkApplication *app, gpointer user_data){
@@ -84,7 +126,7 @@ static void activate(GtkApplication *app, gpointer user_data){
 	btn_añadir = GTK_WIDGET(gtk_builder_get_object(builder, "btn_add_product"));	
 		
 	//al pulsar el boton añadir abrir la ventana del buscador
-	g_signal_connect(btn_añadir, "clicked", G_CALLBACK(on_btn_abrir_buscador_clicked), window);
+	g_signal_connect(btn_añadir, "clicked", G_CALLBACK(on_btn_abrir_buscador_clicked), data);
 
 	//mostrar la ventana
 	gtk_window_present(GTK_WINDOW(window));
@@ -141,10 +183,16 @@ static void estilos(){
 	g_object_unref(provider);
 }
 
-void on_btn_abrir_buscador_clicked(GtkButton *btn, gpointer ventana_principal) {
+void on_btn_abrir_buscador_clicked(GtkButton *btn, gpointer user_data) {
+    
+    // Recuperamos data que contiene la db y el store
+    AppData *data = (AppData *)user_data;	
+
     GtkBuilder *builder;
     GtkWidget *search_window;
     GtkWidget *btn_cancelar_2;
+    GtkWidget *entry_busqueda;
+    GtkColumnView *cv;
 
     builder = gtk_builder_new_from_file("search_product.ui");
     search_window = GTK_WIDGET(gtk_builder_get_object(builder, "search_window"));
@@ -152,9 +200,34 @@ void on_btn_abrir_buscador_clicked(GtkButton *btn, gpointer ventana_principal) {
     //obtiene el widget para cancelar el añadir
     btn_cancelar_2 = GTK_WIDGET(gtk_builder_get_object(builder, "btn_cancelar_2"));
 
-    // Configuracion para que dependa de la ventana principal
-    gtk_window_set_transient_for(GTK_WINDOW(search_window), GTK_WINDOW(ventana_principal));
+    //se obtiene el widget de el buscador y el columnview de añadir productos
+    entry_busqueda = GTK_WIDGET(gtk_builder_get_object(builder, "search_entry"));
+
+    cv = GTK_COLUMN_VIEW(gtk_builder_get_object(builder, "column_view_productos"));
+
+    //obtener la ventana de ventas
+    GtkWindow *ventana_padre = gtk_application_get_active_window(GTK_APPLICATION(g_application_get_default()));
+    
+    // Establecemos que la ventana de añadir productos depende de la principal
+    if (ventana_padre != NULL) {
+        gtk_window_set_transient_for(GTK_WINDOW(search_window), ventana_padre);
+    }
     gtk_window_set_modal(GTK_WINDOW(search_window), TRUE);
+    // ----------------------------------------
+
+
+    // Configurar Factories (Llamada a producto.c)
+    producto_configurar_columnas(builder);
+
+    // Conectar el Modelo al ColumnView
+    if (cv) {
+        GtkNoSelection *selection = gtk_no_selection_new(G_LIST_MODEL(data->productos_store));
+        gtk_column_view_set_model(cv, GTK_SELECTION_MODEL(selection));
+        g_object_unref(selection);
+    }
+
+    //Conectar señal de búsqueda
+    g_signal_connect(entry_busqueda, "changed", G_CALLBACK(on_search_entry_changed), data);
 
     //se utiliza para cerrar la ventana cuando se da al boton cancelar
     g_signal_connect_swapped(btn_cancelar_2, "clicked", G_CALLBACK(gtk_window_destroy), search_window);

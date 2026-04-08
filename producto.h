@@ -12,6 +12,9 @@ G_DECLARE_FINAL_TYPE(ProductoObj, producto_obj, PRODUCTO, OBJ, GObject)
 // Constructor: Crea una nueva instancia con los datos
 ProductoObj* producto_obj_new(int id, const char *nombre, double precio, int existencia);
 
+//hará uso de factory para configurar
+void producto_configurar_columnas(GtkBuilder *builder);
+
 // Getters (para el Factory del ColumnView)
 int         producto_obj_get_id(ProductoObj *self);
 const char* producto_obj_get_nombre(ProductoObj *self);
