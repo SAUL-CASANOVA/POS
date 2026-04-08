@@ -64,6 +64,7 @@ static void activate(GtkApplication *app, gpointer user_data){
 	GtkWidget *window; //ventana principal
 	GtkWidget *reloj; //label de fecha y hora
 	GtkWidget *btn_añadir; //boton de añadir productos ventana ventas
+		
 	//crea el builder y cargar el archivo xml(.ui)
 	builder = gtk_builder_new_from_file("pos_ALPS.ui");
 
@@ -81,7 +82,7 @@ static void activate(GtkApplication *app, gpointer user_data){
 
 	//obtener el boton de agregar 
 	btn_añadir = GTK_WIDGET(gtk_builder_get_object(builder, "btn_add_product"));	
-
+		
 	//al pulsar el boton añadir abrir la ventana del buscador
 	g_signal_connect(btn_añadir, "clicked", G_CALLBACK(on_btn_abrir_buscador_clicked), window);
 
@@ -143,15 +144,25 @@ static void estilos(){
 void on_btn_abrir_buscador_clicked(GtkButton *btn, gpointer ventana_principal) {
     GtkBuilder *builder;
     GtkWidget *search_window;
+    GtkWidget *btn_cancelar_2;
 
     builder = gtk_builder_new_from_file("search_product.ui");
     search_window = GTK_WIDGET(gtk_builder_get_object(builder, "search_window"));
+
+    //obtiene el widget para cancelar el añadir
+    btn_cancelar_2 = GTK_WIDGET(gtk_builder_get_object(builder, "btn_cancelar_2"));
 
     // Configuracion para que dependa de la ventana principal
     gtk_window_set_transient_for(GTK_WINDOW(search_window), GTK_WINDOW(ventana_principal));
     gtk_window_set_modal(GTK_WINDOW(search_window), TRUE);
 
+    //se utiliza para cerrar la ventana cuando se da al boton cancelar
+    g_signal_connect_swapped(btn_cancelar_2, "clicked", G_CALLBACK(gtk_window_destroy), search_window);
+
     gtk_window_present(GTK_WINDOW(search_window));
 
     g_object_unref(builder);
 }
+
+
+

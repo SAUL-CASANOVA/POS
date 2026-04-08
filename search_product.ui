@@ -2,7 +2,7 @@
 <!-- Created with Cambalache 1.0 -->
 <interface>
   <!-- interface-name search_product.ui -->
-  <requires lib="gtk" version="4.0"/>
+  <requires lib="gtk" version="4.14"/>
   <object class="GtkWindow" id="search_window">
     <property name="height-request">450</property>
     <property name="title">Añadir producto</property>
@@ -99,7 +99,7 @@
               </object>
             </child>
             <child>
-              <object class="GtkButton">
+              <object class="GtkButton" id="btn_cancelar_2">
                 <property name="halign">center</property>
                 <property name="label">Cancelar</property>
               </object>
