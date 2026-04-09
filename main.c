@@ -7,6 +7,7 @@
 typedef struct {
     sqlite3 *db;
     GListStore *productos_store; //Almacén de objetos ProductoObj
+    GListStore *venta_actual_store; //Almacen de la tabla de ventas principal
 } AppData;
 
 //PROTOTIPOS DE FUNCIONES
@@ -30,6 +31,9 @@ static void on_search_entry_changed(GtkEditable *editable, gpointer user_data);
 
 static void on_seleccion_producto_changed(GtkSelectionModel *model, guint position, guint n_items, gpointer user_data);
 
+//confirma accion del boton de añadir para enviar producto a pestaña de ventas
+void on_btn_confirmar_add_clicked(GtkButton *btn, gpointer user_data);
+
 int main(int argc, char **argv){
 	GtkApplication *app;
 	int status;
@@ -44,6 +48,8 @@ int main(int argc, char **argv){
 
 	// El store se inicializará cuando se abra el buscador o en activate
         data->productos_store = g_list_store_new(PRODUCTO_TYPE_OBJ);
+
+	data->venta_actual_store = g_list_store_new(PRODUCTO_TYPE_OBJ);
 
 	app = gtk_application_new("besto.team.struct", G_APPLICATION_DEFAULT_FLAGS);
 	
@@ -119,7 +125,8 @@ static void activate(GtkApplication *app, gpointer user_data){
 	GtkWidget *window; //ventana principal
 	GtkWidget *reloj; //label de fecha y hora
 	GtkWidget *btn_añadir; //boton de añadir productos ventana ventas
-		
+        GtkColumnView *cv_ventas; //column view donde estan las ventas
+
 	//crea el builder y cargar el archivo xml(.ui)
 	builder = gtk_builder_new_from_file("pos_ALPS.ui");
 
@@ -137,7 +144,17 @@ static void activate(GtkApplication *app, gpointer user_data){
 
 	//obtener el boton de agregar 
 	btn_añadir = GTK_WIDGET(gtk_builder_get_object(builder, "btn_add_product"));	
-		
+	//obtener el column view donde se verá el carrito de productos
+       cv_ventas = GTK_COLUMN_VIEW(gtk_builder_get_object(builder, "productos_venta"));
+ 
+    	if (cv_ventas) {
+    GtkNoSelection *selection = gtk_no_selection_new(G_LIST_MODEL(data->venta_actual_store));
+    gtk_column_view_set_model(cv_ventas, GTK_SELECTION_MODEL(selection));
+    g_object_unref(selection);
+
+    configurar_columnas_venta(builder, data->venta_actual_store); 
+}
+
 	//al pulsar el boton añadir abrir la ventana del buscador
 	g_signal_connect(btn_añadir, "clicked", G_CALLBACK(on_btn_abrir_buscador_clicked), data);
 
@@ -258,6 +275,15 @@ void on_btn_abrir_buscador_clicked(GtkButton *btn, gpointer user_data) {
     //se utiliza para cerrar la ventana cuando se da al boton cancelar
     g_signal_connect_swapped(btn_cancelar_2, "clicked", G_CALLBACK(gtk_window_destroy), search_window);
 
+    // Obtener el botón de añadir del buscador (el de confirmar)
+    GtkWidget *btn_add_confirm = GTK_WIDGET(gtk_builder_get_object(builder, "btn_add_confirm")); 
+    if (btn_add_confirm) {
+    // Le pasamos el builder para que encuentre el SpinButton y el Entry
+    g_object_set_data(G_OBJECT(btn_add_confirm), "m_builder", builder);
+    g_signal_connect(btn_add_confirm, "clicked", G_CALLBACK(on_btn_confirmar_add_clicked), data);
+    }
+
+
     gtk_window_present(GTK_WINDOW(search_window));
 }
 
@@ -282,9 +308,34 @@ static void on_seleccion_producto_changed(GtkSelectionModel *model, guint positi
         if(entry_nombre){
         // Poner el nombre del objeto en el Entry
         gtk_editable_set_text(entry_nombre, producto_obj_get_nombre(seleccionado));
+	//guardamos el objeto, se adjunta al widget para utilizarlo después
+	g_object_set_data_full(G_OBJECT(entry_nombre), "producto_actual", seleccionado, g_object_unref);
 	}
 
-        g_object_unref(seleccionado); // Importante liberar la referencia que nos dio g_list_model
     }
 }
+     gtk_bitset_unref(selection);
+}
+
+void on_btn_confirmar_add_clicked(GtkButton *btn, gpointer user_data) {
+    AppData *data = (AppData *)user_data;
+    GtkBuilder *builder = g_object_get_data(G_OBJECT(btn), "m_builder");
+
+    GtkEditable *entry_nombre = GTK_EDITABLE(gtk_builder_get_object(builder, "entry_producto_seleccionado"));
+    GtkSpinButton *spin_cant = GTK_SPIN_BUTTON(gtk_builder_get_object(builder, "spin_cantidad"));
+    
+    //Recuperar el objeto que guardamos en on_seleccion_producto_changed
+    ProductoObj *producto_sel = g_object_get_data(G_OBJECT(entry_nombre), "producto_actual");
+    int cantidad = gtk_spin_button_get_value_as_int(spin_cant);
+
+    if (producto_sel && cantidad > 0) {
+        //setear cantidad 
+	producto_obj_set_cantidad(producto_sel, cantidad);
+	    //Añadir al store de la venta principal
+        g_list_store_append(data->venta_actual_store, producto_sel);
+
+        // Cerrar la ventana del buscador
+        GtkWidget *window = GTK_WIDGET(gtk_builder_get_object(builder, "search_window"));
+        gtk_window_destroy(GTK_WINDOW(window));
+    }
 }

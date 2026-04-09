@@ -21,4 +21,16 @@ const char* producto_obj_get_nombre(ProductoObj *self);
 double      producto_obj_get_precio(ProductoObj *self);
 int         producto_obj_get_existencia(ProductoObj *self);
 
+// Prototipo
+void producto_obj_set_cantidad(ProductoObj *self, int cantidad);
+int producto_obj_get_cantidad(ProductoObj *self);
+void on_ventas_id_bind(GtkSignalListItemFactory *factory, GtkListItem *list_item);
+void on_ventas_nombre_bind(GtkSignalListItemFactory *factory, GtkListItem *list_item);
+void on_ventas_cant_bind(GtkSignalListItemFactory *factory, GtkListItem *list_item);
+void on_ventas_precio_bind(GtkSignalListItemFactory *factory, GtkListItem *list_item);
+void on_ventas_iva_bind(GtkSignalListItemFactory *factory, GtkListItem *list_item);
+void on_ventas_eliminar_setup(GtkSignalListItemFactory *factory, GtkListItem *list_item);
+void on_ventas_eliminar_bind(GtkSignalListItemFactory *factory, GtkListItem *list_item);
+void configurar_columnas_venta(GtkBuilder *builder, GListStore *store);
+void on_setup_label(GtkSignalListItemFactory *factory, GtkListItem *list_item);
 #endif
