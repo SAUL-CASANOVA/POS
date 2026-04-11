@@ -34,6 +34,12 @@ static void on_seleccion_producto_changed(GtkSelectionModel *model, guint positi
 //confirma accion del boton de añadir para enviar producto a pestaña de ventas
 void on_btn_confirmar_add_clicked(GtkButton *btn, gpointer user_data);
 
+//funcion para usar el boton de cancelar venta y pedir confirmacion con un widget de cuadro de dialogo
+void on_btn_cancelar_venta_clicked(GtkButton *btn, gpointer user_data);
+
+//despues de que se pulsa boton de cancelar venta y se da que si a la confirmacion del boton de cuadro de dialogo actúa esta funcion
+static void on_cancelar_confirmado(GObject *source, GAsyncResult *res, gpointer user_data);
+
 int main(int argc, char **argv){
 	GtkApplication *app;
 	int status;
@@ -113,6 +119,37 @@ static void on_search_entry_changed(GtkEditable *editable, gpointer user_data) {
     }
 }
 
+void on_btn_cancelar_venta_clicked(GtkButton *btn, gpointer user_data) {
+    AppData *data = (AppData *)user_data;
+    
+    // Crear el diálogo de alerta
+    GtkAlertDialog *dialog = gtk_alert_dialog_new("¿Estás seguro de cancelar la venta?");
+    gtk_alert_dialog_set_detail(dialog, "Esta acción borrará todos los productos del carrito.");
+    
+    // Definir los botones: el primero (índice 0) es el positivo
+    const char *botones[] = {"Sí, borrar todo", "No, mantener", NULL};
+    gtk_alert_dialog_set_buttons(dialog, botones);
+    
+    // Mostrar el diálogo de forma asíncrona
+    gtk_alert_dialog_choose(dialog, GTK_WINDOW(gtk_widget_get_root(GTK_WIDGET(btn))), NULL, on_cancelar_confirmado, data);
+    
+    g_object_unref(dialog);
+}    
+
+static void on_cancelar_confirmado(GObject *source, GAsyncResult *res, gpointer user_data) {
+    GtkAlertDialog *dialog = GTK_ALERT_DIALOG(source);
+    AppData *data = (AppData *)user_data;
+    GError *error = NULL;
+    int respuesta = gtk_alert_dialog_choose_finish(dialog, res, &error);
+
+    // Si la respuesta es 0 (sabiendo que el botón "Sí" es el índice 0)
+    if (respuesta == 0) {
+	    //esta funcion de gtk borra el contenido del list_store lo que hará que no haya nada que mostrar que bien ! :] atte: SS
+        g_list_store_remove_all(data->venta_actual_store);
+    }
+    
+    if (error) g_error_free(error);
+}
 
 static void activate(GtkApplication *app, gpointer user_data){
 	//Recuperar la estructura que trae la db
@@ -126,6 +163,7 @@ static void activate(GtkApplication *app, gpointer user_data){
 	GtkWidget *reloj; //label de fecha y hora
 	GtkWidget *btn_añadir; //boton de añadir productos ventana ventas
         GtkColumnView *cv_ventas; //column view donde estan las ventas
+	GtkWidget *btn_cancelar; //boton que cancela la venta, borra carrito
 
 	//crea el builder y cargar el archivo xml(.ui)
 	builder = gtk_builder_new_from_file("pos_ALPS.ui");
@@ -146,7 +184,10 @@ static void activate(GtkApplication *app, gpointer user_data){
 	btn_añadir = GTK_WIDGET(gtk_builder_get_object(builder, "btn_add_product"));	
 	//obtener el column view donde se verá el carrito de productos
        cv_ventas = GTK_COLUMN_VIEW(gtk_builder_get_object(builder, "productos_venta"));
- 
+
+	//obtener boton cancelar venta
+	btn_cancelar = GTK_WIDGET(gtk_builder_get_object(builder, "btn_cancelar_venta"));	
+
     	if (cv_ventas) {
     GtkNoSelection *selection = gtk_no_selection_new(G_LIST_MODEL(data->venta_actual_store));
     gtk_column_view_set_model(cv_ventas, GTK_SELECTION_MODEL(selection));
@@ -157,6 +198,11 @@ static void activate(GtkApplication *app, gpointer user_data){
 
 	//al pulsar el boton añadir abrir la ventana del buscador
 	g_signal_connect(btn_añadir, "clicked", G_CALLBACK(on_btn_abrir_buscador_clicked), data);
+
+	//señal para cuando se pulse el boton de cancelar se elimine el carrito
+	if (btn_cancelar) {
+        g_signal_connect(btn_cancelar, "clicked", G_CALLBACK(on_btn_cancelar_venta_clicked), data);
+    }
 
 	//mostrar la ventana
 	gtk_window_present(GTK_WINDOW(window));

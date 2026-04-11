@@ -4,17 +4,25 @@
   <!-- interface-name search_product.ui -->
   <requires lib="gtk" version="4.14"/>
   <object class="GtkWindow" id="search_window">
+    <property name="css-classes">monika-window</property>
     <property name="height-request">450</property>
+    <property name="hexpand">True</property>
     <property name="title">Añadir producto</property>
+    <property name="titlebar">
+      <object class="GtkHeaderBar"/>
+    </property>
+    <property name="vexpand">True</property>
     <property name="width-request">600</property>
     <child>
       <object class="GtkBox">
+        <property name="hexpand">True</property>
         <property name="margin-bottom">15</property>
         <property name="margin-end">15</property>
         <property name="margin-start">15</property>
         <property name="margin-top">10</property>
         <property name="orientation">vertical</property>
         <property name="spacing">10</property>
+        <property name="vexpand">True</property>
         <child>
           <object class="GtkLabel">
             <property name="label">BUSCAR POR NOMBRE O ID</property>
@@ -28,26 +36,33 @@
         </child>
         <child>
           <object class="GtkScrolledWindow">
+            <property name="hexpand">True</property>
             <property name="vexpand">True</property>
             <child>
               <object class="GtkColumnView" id="column_view_productos">
+                <property name="hexpand">True</property>
+                <property name="vexpand">True</property>
                 <child>
                   <object class="GtkColumnViewColumn" id="col_id">
+                    <property name="resizable">True</property>
                     <property name="title">ID</property>
                   </object>
                 </child>
                 <child>
                   <object class="GtkColumnViewColumn" id="col_nombre">
+                    <property name="resizable">True</property>
                     <property name="title">Producto</property>
                   </object>
                 </child>
                 <child>
                   <object class="GtkColumnViewColumn" id="col_precio">
+                    <property name="resizable">True</property>
                     <property name="title">Precio U.(C/IVA)</property>
                   </object>
                 </child>
                 <child>
                   <object class="GtkColumnViewColumn" id="col_existencia">
+                    <property name="resizable">True</property>
                     <property name="title">Stock</property>
                   </object>
                 </child>

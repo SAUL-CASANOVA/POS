@@ -105,7 +105,7 @@
               </object>
             </child>
             <child>
-              <object class="GtkButton">
+              <object class="GtkButton" id="btn_cancelar_venta">
                 <property name="css-classes">cancel-btn</property>
                 <property name="halign">start</property>
                 <property name="label">Cancelar venta</property>

@@ -1,4 +1,145 @@
+
+/*Botones en general*/
+button {
+    background-color: #ffb7c5;
+    color: white;
+    border-radius: 10px;
+    border: 2px solid #ff99aa;
+    padding: 6px 12px;
+}
+
+button:hover {
+    background-color: #ff99aa;
+}
+
+/* El texto dentro de los botones */
+button label {
+color: #4a2c2a; /*café*/
+}
+
+/*Estilos para el carrito de compras*/
+columnview {
+    background-color: #ffffff; /* Fondo blanco para los productos */
+    border: 1px solid #ffb7c5;
+    color: #4a2c2a; /* Texto café oscuro para los datos */
+}
+
+columnview column {
+    background-color: #ffeff2; /* Un rosa muy tenue para las cabeceras */
+    border-bottom: 2px solid #ffb7c5;
+}
+
+columnview listview row:selected {
+    background-color: #ff99aa; /* Fila seleccionada en rosa fuerte */
+    color: white;
+}
+
+/*estilo para seleccion de cantidad*/
+spinbutton {
+    background-color: #ffffff;
+    border: 2px solid #ffb7c5;
+    border-radius: 5px;
+}
+
+spinbutton button {
+    background-color: #ffeff2;
+    border: none;
+    color: #ff99aa;
+}
+
+
 .cancel-btn{
 color: #ff0000; /*color de texto*/
 border: 2px solid #ff0000; /*especificacion borde de boton con color*/
 }
+
+/*Diseño para las ventanas de diálogo oh si oh si*/
+window.dialog{
+background-color: #fff0f5; /*rosado claro*/
+}
+
+window.dialog button {
+background-color: #ffb7c5;
+border-radius: 10px;
+color: white;
+}
+
+window.dialog button:hover {
+background-color: #ff99aa; /* Un rosa más intenso al pasar el mouse */
+}
+
+/* Estilo para el texto de los diálogos */
+window.dialog label {
+color: #4a2c2a; /* Un café oscuro que resalta en el rosa */
+font-weight: bold;
+}
+
+/* El título principal del diálogo */
+window.dialog .title {
+    color: #4a2c2a;
+    font-size: 18px;
+}
+
+/* Los botones dentro del diálogo para que el texto sea legible */
+window.dialog button label {
+    color: #ffffff; /* Texto blanco sobre botones rosa fuerte */
+}
+
+/*personalizamos una ventana con clase - se conectó con la ventana de añadir producto*/
+.monika-window {
+border: 5px solid #ffb7c5;
+background-color: #fff0f5;
+}
+
+/*estilo para entradas de datos y buscador spinbutton*/
+entry, spinbutton {
+    background-color: #ffffff;
+    border: 2px solid #ffb7c5;
+    color: #4a2c2a;
+    border-radius: 5px;
+}
+
+entry:focus {
+    border-color: #ff99aa;
+    box-shadow: 0 0 5px #ffb7c5;
+}
+
+/*Color de barras de titulos*/
+headerbar {
+    background-color: #ff99aa; /* Rosa más intenso para el título */
+    border-bottom: 2px solid #ffb7c5;
+    color: white; /* El título de la app en blanco */
+}
+
+headerbar label {
+    color: white; /* Asegura que el nombre de la app sea blanco */
+    font-weight: bold;
+}
+
+headerbar windowcontrols button {
+    border: none;
+    box-shadow: none;
+}
+
+/*estilo ventanas*/
+window {
+    background-color: #fff0f5; /* Rosa claro */
+}
+
+/*ESTO LE DA EL COLOR AL CARRITO DE COMPRAS, SON LOS LISTVIEW LOS QUE GENERAN ESO*/
+columnview listview {
+    background-color: #ffffff;
+    color: #4a2c2a;
+}
+
+
+/*color de labels solos*/
+label {
+color: #4a2c2a; /*café para texto*/
+font-weight: 800;
+/*suavizar transicion*/
+transition: all 0.2s ease-in-out;
+}
+
+
+

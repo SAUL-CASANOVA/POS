@@ -218,7 +218,7 @@ void configurar_columnas_venta(GtkBuilder *builder, GListStore *venta_store) {
     for (int i = 0; i < 7; i++) {
         GtkColumnViewColumn *col = GTK_COLUMN_VIEW_COLUMN(gtk_builder_get_object(builder, columnas[i].id));
         if (col) {
-            GtkListItemFactory *factory = gtk_signal_list_item_factory_new();
+	       	GtkListItemFactory *factory = gtk_signal_list_item_factory_new();
             if (g_strcmp0(columnas[i].id, "eliminar_column_view") == 0) {
                 g_object_set_data(G_OBJECT(factory), "mi_store", venta_store);
             }
