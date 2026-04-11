@@ -53,7 +53,7 @@ static void on_cancelar_confirmado(GObject *source, GAsyncResult *res, gpointer 
 void actualizar_resumen(GtkBuilder *builder);
 
 //funcion que genera un archivo de texto con el ticket de venta
-void generar_ticket_archivo(AppData *data);
+void generar_ticket_archivo(AppData *data, GtkWidget *parent_window);
 
 //funcion para generar ticket al pulsar el boton de generar ticket
 void on_btn_generar_ticket_clicked(GtkButton *btn, gpointer user_data);
@@ -465,29 +465,33 @@ void actualizar_resumen(GtkBuilder *builder) {
     gtk_label_set_text(lbl_total, buffer);
 }
 
-void generar_ticket_archivo(AppData *data) {
-    FILE *f = fopen("ticket_doki_doki.txt", "w");
-    if (f == NULL) return;
-
+// --- FUNCIÓN PARA GENERAR EL TICKET CON NOMBRE ÚNICO ---
+void generar_ticket_archivo(AppData *data, GtkWidget *parent_window) {
     GDateTime *now = g_date_time_new_now_local();
     
-    // %A = Nombre del día, %d/%m/%Y = Fecha, %H:%M = Hora
-    // Ejemplo: Sábado 11/04/2026  16:15
-    char *fecha_completa = g_date_time_format(now, "%A %d/%m/%Y  %H:%M");
+    // Nombre de archivo único (Timestamp)
+    char *nombre_archivo = g_date_time_format(now, "ticket_%Y%m%d_%H%M%S.txt");
+    // Fecha legible para el contenido
+    char *fecha_visual = g_date_time_format(now, "%A %d/%m/%Y  %H:%M");
 
+    FILE *f = fopen(nombre_archivo, "w");
+    if (f == NULL) {
+        g_free(nombre_archivo);
+        g_free(fecha_visual);
+        g_date_time_unref(now);
+        return;
+    }
+
+    // --- Diseño del Ticket ---
     fprintf(f, "==========================================\n");
     fprintf(f, "            ドキドキショップ\n");
     fprintf(f, "             Doki Doki Shop\n");
     fprintf(f, "==========================================\n");
-    
-    // Usamos la fecha formateada aquí
-    fprintf(f, "Fecha: %s\n", fecha_completa);
-    
+    fprintf(f, "Fecha: %s\n", fecha_visual);
     fprintf(f, "------------------------------------------\n");
     fprintf(f, "%-25s %-5s %10s\n", "PRODUCTO", "CANT", "PRECIO");
     fprintf(f, "------------------------------------------\n");
 
-    // Recorrer productos...
     guint n_items = g_list_model_get_n_items(G_LIST_MODEL(data->venta_actual_store));
     for (guint i = 0; i < n_items; i++) {
         ProductoObj *p = g_list_model_get_item(G_LIST_MODEL(data->venta_actual_store), i);
@@ -499,8 +503,12 @@ void generar_ticket_archivo(AppData *data) {
     }
 
     fprintf(f, "------------------------------------------\n");
+    fprintf(f, "小計\n");
+    fprintf(f, "Subtotal: %31.2f\n", venta.subtotal);
+    fprintf(f, "消費税\n");
+    fprintf(f, "IVA 16%%: %32.2f\n", venta.iva);
     fprintf(f, "合計\n");
-    fprintf(f, "TOTAL: %33.2f\n", venta.total);
+    fprintf(f, "TOTAL: %34.2f\n", venta.total);
     fprintf(f, "==========================================\n");
     fprintf(f, "          ありがとうございました！\n");
     fprintf(f, "             Muchas gracias\n");
@@ -508,11 +516,21 @@ void generar_ticket_archivo(AppData *data) {
 
     fclose(f);
 
-    // LIBERAR MEMORIA DE GLIB
-    g_free(fecha_completa);
-    g_date_time_unref(now);
-}
+    // --- MOSTRAR CUADRO DE DIÁLOGO ---
+    GtkAlertDialog *dialogo = gtk_alert_dialog_new("¡Venta Finalizada!");
+    char *mensaje = g_strdup_printf("El ticket se ha guardado exitosamente como:\n%s", nombre_archivo);
+    gtk_alert_dialog_set_detail(dialogo, mensaje);
     
+    // Mostramos el diálogo de forma asíncrona sobre la ventana principal
+    gtk_alert_dialog_show(dialogo, GTK_WINDOW(parent_window));
+
+    // Limpiar memoria
+    g_free(mensaje);
+    g_free(nombre_archivo);
+    g_free(fecha_visual);
+    g_date_time_unref(now);
+    g_object_unref(dialogo);
+}   
 
 void on_btn_generar_ticket_clicked(GtkButton *btn, gpointer user_data) {
     AppData *data = (AppData *)user_data;
@@ -521,9 +539,12 @@ void on_btn_generar_ticket_clicked(GtkButton *btn, gpointer user_data) {
     if (g_list_model_get_n_items(G_LIST_MODEL(data->venta_actual_store)) == 0) {
         return; 
     }    
-   
+
+    // Obtenemos la ventana raíz para que el diálogo sepa dónde aparecer
+    GtkWidget *root = GTK_WIDGET(gtk_widget_get_root(GTK_WIDGET(btn)));
+
     // Generamos el archivo
-    generar_ticket_archivo(data);
+    generar_ticket_archivo(data, root);
 
     //lógica de limpieza para borrar los elementos del carrito cuando ya se generó el ticket
     //Borrar los elementos de la GListStore
@@ -535,17 +556,10 @@ void on_btn_generar_ticket_clicked(GtkButton *btn, gpointer user_data) {
     venta.total = 0.0;
 
     GtkWindow *main_win = gtk_application_get_active_window(GTK_APPLICATION(g_application_get_default()));
-    GtkBuilder *builder_principal = g_object_get_data(G_OBJECT(main_win), "m_builder");
-
-    if (builder_principal) {
-        actualizar_resumen(builder_principal);
+    if (main_win) {
+        GtkBuilder *builder_principal = g_object_get_data(G_OBJECT(main_win), "m_builder");
+        if (builder_principal) {
+            actualizar_resumen(builder_principal);
+        }
     }
-
-    // Mostrar un aviso simple de que se guardó
-    GtkAlertDialog *alert = gtk_alert_dialog_new("Ticket Generado");
-    gtk_alert_dialog_set_detail(alert, "Se ha guardado 'ticket_doki_doki.txt' en la carpeta del proyecto.");
-    gtk_alert_dialog_show(alert, GTK_WINDOW(gtk_widget_get_root(GTK_WIDGET(btn))));
-    g_object_unref(alert);
 }
-
-

@@ -1,0 +1,27 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<!-- Created with Cambalache 1.0 -->
+<interface>
+  <!-- interface-name ticket.ui -->
+  <requires lib="gtk" version="4.20"/>
+  <object class="GtkWindow">
+    <property name="default-width">300</property>
+    <property name="titlebar">
+      <object class="GtkHeaderBar">
+        <child type="title">
+          <object class="GtkLabel">
+            <property name="label">ドキドキショップ</property>
+          </object>
+        </child>
+      </object>
+    </property>
+    <child>
+      <object class="GtkScrolledWindow">
+        <child>
+          <object class="GtkBox">
+            <property name="orientation">vertical</property>
+          </object>
+        </child>
+      </object>
+    </child>
+  </object>
+</interface>
