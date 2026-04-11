@@ -3,6 +3,15 @@
 #include "database.h"
 #include <string.h>
 
+//Estructura para la venta
+typedef struct {
+    double subtotal;
+    double iva;
+    double total;
+} VentaActual;
+
+VentaActual venta = {0.0, 0.0, 0.0};
+
 // Estructura para pasar datos a la app
 typedef struct {
     sqlite3 *db;
@@ -39,6 +48,9 @@ void on_btn_cancelar_venta_clicked(GtkButton *btn, gpointer user_data);
 
 //despues de que se pulsa boton de cancelar venta y se da que si a la confirmacion del boton de cuadro de dialogo actúa esta funcion
 static void on_cancelar_confirmado(GObject *source, GAsyncResult *res, gpointer user_data);
+
+//funcon para utilizar usar los valores recibidos de precios y actualizar los widgets correspondientes en el resumen de la venta
+void actualizar_resumen(GtkBuilder *builder);
 
 int main(int argc, char **argv){
 	GtkApplication *app;
@@ -146,6 +158,22 @@ static void on_cancelar_confirmado(GObject *source, GAsyncResult *res, gpointer 
     if (respuesta == 0) {
 	    //esta funcion de gtk borra el contenido del list_store lo que hará que no haya nada que mostrar que bien ! :] atte: SS
         g_list_store_remove_all(data->venta_actual_store);
+
+	//lo siguiente es para actualizar el resumen de venta cuando se elimina un producto
+	//reiniciar valores lógicos
+	venta.subtotal = 0.0;
+	venta.iva = 0.0;
+	venta.total = 0.0;
+	
+	//recuperar el builder principal
+	//obtener la ventana principal que esta activa
+	GtkWindow *main_win = gtk_application_get_active_window(GTK_APPLICATION(g_application_get_default()));
+	//extraer el builder de la funcion activate
+	GtkBuilder *builder_principal = g_object_get_data(G_OBJECT(main_win), "m_builder");
+	//llamar a actualizar, con el builder principal correcto
+	if (GTK_IS_BUILDER(builder_principal)) {
+            actualizar_resumen(builder_principal);
+        }
     }
     
     if (error) g_error_free(error);
@@ -171,6 +199,10 @@ static void activate(GtkApplication *app, gpointer user_data){
 	//obtener el objeto de ventana principal
 	window = GTK_WIDGET(gtk_builder_get_object(builder,"main_window"));
 
+	//pegar el puntero del builder a la ventana con etiqueta m_builder
+	g_object_set_data_full(G_OBJECT(window), "m_builder", builder, g_object_unref);
+
+
 	//obtener el label de la fecha y hora
 	reloj = GTK_WIDGET(gtk_builder_get_object(builder, "fecha_label"));
 
@@ -191,7 +223,6 @@ static void activate(GtkApplication *app, gpointer user_data){
     	if (cv_ventas) {
     GtkNoSelection *selection = gtk_no_selection_new(G_LIST_MODEL(data->venta_actual_store));
     gtk_column_view_set_model(cv_ventas, GTK_SELECTION_MODEL(selection));
-    g_object_unref(selection);
 
     configurar_columnas_venta(builder, data->venta_actual_store); 
 }
@@ -207,8 +238,6 @@ static void activate(GtkApplication *app, gpointer user_data){
 	//mostrar la ventana
 	gtk_window_present(GTK_WINDOW(window));
 
-	//liberar el builder una vez que la ventana ya está en memoria
-	g_object_unref(builder);
 
 
 
@@ -367,6 +396,12 @@ void on_btn_confirmar_add_clicked(GtkButton *btn, gpointer user_data) {
     AppData *data = (AppData *)user_data;
     GtkBuilder *builder = g_object_get_data(G_OBJECT(btn), "m_builder");
 
+	//buscar la ventana activa
+	GtkWindow *main_win = gtk_application_get_active_window(GTK_APPLICATION(g_application_get_default()));
+
+	//Recuperar el builder que se guardó en la ventana activate
+	GtkBuilder *builder_principal = g_object_get_data(G_OBJECT(main_win), "m_builder");
+
     GtkEditable *entry_nombre = GTK_EDITABLE(gtk_builder_get_object(builder, "entry_producto_seleccionado"));
     GtkSpinButton *spin_cant = GTK_SPIN_BUTTON(gtk_builder_get_object(builder, "spin_cantidad"));
     
@@ -377,11 +412,41 @@ void on_btn_confirmar_add_clicked(GtkButton *btn, gpointer user_data) {
     if (producto_sel && cantidad > 0) {
         //setear cantidad 
 	producto_obj_set_cantidad(producto_sel, cantidad);
-	    //Añadir al store de la venta principal
+
+	//esta parte es para actualizar el valor en el resumen de venta
+	//sumar al subtotal global: Precio unitario * cantidad
+	venta.subtotal += (producto_obj_get_precio(producto_sel) * cantidad);
+
+	//Añadir al store de la venta principal
         g_list_store_append(data->venta_actual_store, producto_sel);
+
+	//actualizar los labels del resumen de la ventana principal con la funcion creada
+	actualizar_resumen(builder_principal);
 
         // Cerrar la ventana del buscador
         GtkWidget *window = GTK_WIDGET(gtk_builder_get_object(builder, "search_window"));
         gtk_window_destroy(GTK_WINDOW(window));
     }
+}
+
+void actualizar_resumen(GtkBuilder *builder) {
+    //El IVA es del 16%
+    venta.iva = venta.subtotal * 0.16;
+    venta.total = venta.subtotal + venta.iva;
+
+    // Obtener los objetos Label por su ID en el ui
+    GtkLabel *lbl_subtotal = GTK_LABEL(gtk_builder_get_object(builder, "lbl_subtotal_val"));
+    GtkLabel *lbl_iva = GTK_LABEL(gtk_builder_get_object(builder, "lbl_iva_val"));
+    GtkLabel *lbl_total = GTK_LABEL(gtk_builder_get_object(builder, "lbl_total_val"));
+
+    char buffer[32];
+
+    sprintf(buffer, "$%.2f", venta.subtotal);
+    gtk_label_set_text(lbl_subtotal, buffer);
+
+    sprintf(buffer, "$%.2f", venta.iva);
+    gtk_label_set_text(lbl_iva, buffer);
+
+    sprintf(buffer, "$%.2f", venta.total);
+    gtk_label_set_text(lbl_total, buffer);
 }

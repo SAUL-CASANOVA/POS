@@ -156,7 +156,7 @@ frame-resumen</property>
                               </object>
                             </child>
                             <child>
-                              <object class="GtkLabel"/>
+                              <object class="GtkLabel" id="lbl_subtotal_val"/>
                             </child>
                           </object>
                         </child>
@@ -174,7 +174,7 @@ frame-resumen</property>
                               </object>
                             </child>
                             <child>
-                              <object class="GtkLabel"/>
+                              <object class="GtkLabel" id="lbl_iva_val"/>
                             </child>
                           </object>
                         </child>
@@ -193,7 +193,7 @@ frame-resumen</property>
                               </object>
                             </child>
                             <child>
-                              <object class="GtkLabel"/>
+                              <object class="GtkLabel" id="lbl_total_val"/>
                             </child>
                           </object>
                         </child>

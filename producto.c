@@ -1,5 +1,15 @@
 #include "producto.h"
 
+typedef struct {
+    double subtotal;
+    double iva;
+    double total;
+} VentaActual;
+
+extern VentaActual venta; // Indica que la variable global está en main.c
+void actualizar_resumen(GtkBuilder *builder); // Prototipo de la función de main.c
+
+
 // Implementación del modelo ProductoObj
 struct _ProductoObj {
     GObject parent_instance;
@@ -46,11 +56,12 @@ void producto_obj_set_cantidad(ProductoObj *self, int cantidad) {
 }
 
 int producto_obj_get_cantidad(ProductoObj *self) {
-    g_return_val_if_fail(PRODUCTO_IS_OBJ(self), 0);
+    
+	g_return_val_if_fail(PRODUCTO_IS_OBJ(self), 0);
     return self->cantidad;
 }
 
-// --- FUNCIONES DE APOYO (DEBEN IR ARRIBA) ---
+// --- FUNCIONES DE APOYO ---
 
 void on_setup_label(GtkSignalListItemFactory *factory, GtkListItem *list_item) {
     GtkWidget *label = gtk_label_new(NULL);
@@ -64,8 +75,25 @@ static void on_btn_eliminar_clicked(GtkButton *btn, gpointer user_data) {
     if (store && producto) {
         guint posicion;
         if (g_list_store_find(store, producto, &posicion)) {
+
+	//se resta el valor del producto a eliminar del subtotal en el resumen
+	venta.subtotal -= (producto_obj_get_precio(producto) * producto_obj_get_cantidad(producto));
+	//asegurar que el total no sea negativo por error de redondeo
+	if (venta.subtotal < 0) venta.subtotal = 0;
+
+	//se quita de la lista visual
             g_list_store_remove(store, posicion);
-        }
+        
+	// Actualizar la interfaz principal
+            GtkWindow *main_win = gtk_application_get_active_window(GTK_APPLICATION(g_application_get_default()));
+            if (main_win) {
+                GtkBuilder *builder_principal = g_object_get_data(G_OBJECT(main_win), "m_builder");
+                if (builder_principal) {
+                    actualizar_resumen(builder_principal);
+                }
+            }
+	
+	}
     }
 }
 
