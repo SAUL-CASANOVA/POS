@@ -2,5 +2,5 @@
 <!DOCTYPE cambalache-project SYSTEM "cambalache-project.dtd">
 <!-- Created with Cambalache 1.0 -->
 <cambalache-project version="1.0.0" target_tk="gtk-4.0">
-  <ui filename="pos_ALPS.ui" sha256="b03a92e8e303c9b47b18b35fba2e20ebf916f73ad233a0a4a7c364489f505dee"/>
+  <ui filename="pos_ALPS.ui" sha256="73738abb2df8dabb78123915104fd7d47581c8c9c41b24259f8d70c167717355"/>
 </cambalache-project>
