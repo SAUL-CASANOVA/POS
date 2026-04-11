@@ -72,12 +72,12 @@
                     </child>
                     <child>
                       <object class="GtkColumnViewColumn" id="precio_column_view">
-                        <property name="title">PRECIO U.(C/IVA)</property>
+                        <property name="title">PRECIO U.(SIN IVA)</property>
                       </object>
                     </child>
                     <child>
                       <object class="GtkColumnViewColumn" id="iva_column_view">
-                        <property name="title">IVA INCLUIDO</property>
+                        <property name="title">IVA</property>
                       </object>
                     </child>
                     <child>
@@ -150,6 +150,7 @@ frame-resumen</property>
                         <child>
                           <object class="GtkBox">
                             <property name="css-classes">panel-resumen</property>
+                            <property name="spacing">10</property>
                             <child>
                               <object class="GtkLabel">
                                 <property name="label">Subtotal ( Sin IVA)</property>
@@ -168,6 +169,7 @@ frame-resumen</property>
                         <child>
                           <object class="GtkBox">
                             <property name="css-classes">panel-resumen</property>
+                            <property name="spacing">10</property>
                             <child>
                               <object class="GtkLabel">
                                 <property name="label">IVA incluido (16%)</property>
@@ -186,6 +188,7 @@ frame-resumen</property>
                         <child>
                           <object class="GtkBox">
                             <property name="css-classes">panel-resumen</property>
+                            <property name="spacing">10</property>
                             <property name="width-request">300</property>
                             <child>
                               <object class="GtkLabel">
@@ -200,7 +203,7 @@ frame-resumen</property>
                       </object>
                     </child>
                     <child>
-                      <object class="GtkButton">
+                      <object class="GtkButton" id="btn_ticket">
                         <property name="label">Generar ticket</property>
                       </object>
                     </child>
