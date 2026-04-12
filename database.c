@@ -1,4 +1,5 @@
 #include "database.h"
+#include "producto.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -132,4 +133,45 @@ bool db_registrar_venta(sqlite3* db, int id_producto, int cantidad, double total
 // Implementación de la búsqueda (ejemplo base)
 void db_consultar_producto(sqlite3* db, int id_producto) {
     // Aquí se implementa el select
+}
+
+/* --- GESTIÓN DE PRODUCTOS (CRUD INVENTARIO) --- */
+
+// Función para actualizar SOLO el stock de un producto (CRUD: Update)
+bool db_actualizar_stock(sqlite3* db, int id_producto, int nueva_existencia) {
+    char *err_msg = 0;
+    // Preparamos la sentencia SQL formateada
+    char *sql = sqlite3_mprintf(
+        "UPDATE productos SET existencia = %d WHERE id = %d;",
+        nueva_existencia, id_producto
+    );
+
+    int rc = sqlite3_exec(db, sql, 0, 0, &err_msg);
+    sqlite3_free(sql); // Liberar memoria de mprintf
+
+    if (rc != SQLITE_OK) {
+        fprintf(stderr, "Error al actualizar stock del producto ID %d: %s\n", id_producto, err_msg);
+        sqlite3_free(err_msg);
+        return false;
+    }
+    g_print("Stock del producto ID %d actualizado exitosamente.\n", id_producto);
+    return true;
+}
+
+// Función para eliminar un producto (CRUD: Delete)
+bool db_eliminar_producto(sqlite3* db, int id_producto) {
+    char *err_msg = 0;
+    // Usamos el ID como Primary Key para el DELETE
+    char *sql = sqlite3_mprintf("DELETE FROM productos WHERE id = %d;", id_producto);
+
+    int rc = sqlite3_exec(db, sql, 0, 0, &err_msg);
+    sqlite3_free(sql);
+
+    if (rc != SQLITE_OK) {
+        fprintf(stderr, "Error al eliminar el producto ID %d: %s\n", id_producto, err_msg);
+        sqlite3_free(err_msg);
+        return false;
+    }
+    g_print("Producto ID %d eliminado exitosamente.\n", id_producto);
+    return true;
 }

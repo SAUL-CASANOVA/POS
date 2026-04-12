@@ -20,7 +20,8 @@ CREATE TABLE IF NOT EXISTS ventas (
     
     -- Esta línea une la venta con un producto real
     FOREIGN KEY (id_producto) REFERENCES productos(id) 
-        ON DELETE CASCADE
+    --borra los datos relacionados cuando eliminas el registro principal    
+    ON DELETE CASCADE
 );
 
 -- 4. Índices para que las búsquedas sean rápidas en el POS

@@ -3,6 +3,7 @@
 
 #include <sqlite3.h>
 #include <stdbool.h>
+#include <gtk/gtk.h> 
 
 /* --- CONFIGURACIÓN INICIAL --- */
 
@@ -18,19 +19,21 @@ void cerrar_db(sqlite3* db);
 // Agrega un producto nuevo al inventario
 bool db_insertar_producto(sqlite3* db, const char* nombre, double precio, int existencia);
 
-// Actualiza el stock de un producto
+// Actualiza el stock de un producto (Usada en inventario)
 bool db_actualizar_stock(sqlite3* db, int id_producto, int nueva_existencia);
 
-// Busca un producto y devuelve sus datos 
+// Elimina un producto por ID
+bool db_eliminar_producto(sqlite3* db, int id_producto);
+
+// Búsqueda 
 void db_consultar_producto(sqlite3* db, int id_producto);
 
 
 /* --- GESTIÓN DE VENTAS (TRANSACCIONES) --- */
 
-/* * Registra una venta:
- * 1. Inserta el movimiento en la tabla 'ventas'
- * 2. Resta la cantidad vendida de la tabla 'productos'
- */
+// Registra una venta:
+// Inserta el movimiento en la tabla 'ventas'
+// Resta la cantidad vendida de la tabla 'productos'
 bool db_registrar_venta(sqlite3* db, int id_producto, int cantidad, double total);
 
 // Devuelve una lista de las ventas realizadas 
