@@ -199,7 +199,11 @@ static void activate(GtkApplication *app, gpointer user_data){
         GtkColumnView *cv_ventas; //column view donde estan las ventas
 	GtkWidget *btn_cancelar; //boton que cancela la venta, borra carrito
 	GtkWidget *btn_generar_ticket; //boton para generar el ticket de venta
-	
+	GtkWidget *pag_ventas; //pagina de ventas
+	GtkWidget *pag_inventario; //pagina de inventario
+	GtkNotebook *notebook; //contenedor de las pestañas o paginas
+
+
 	//crea el builder y cargar el archivo xml(.ui)
 	builder = gtk_builder_new_from_file("pos_ALPS.ui");
 
@@ -229,7 +233,16 @@ static void activate(GtkApplication *app, gpointer user_data){
 	
 	//obtener boton para generar ticket
 	btn_generar_ticket = GTK_WIDGET(gtk_builder_get_object(builder, "btn_ticket"));
-	
+
+	notebook = GTK_NOTEBOOK(gtk_builder_get_object(builder, "nb_principal"));
+	pag_ventas = GTK_WIDGET(gtk_builder_get_object(builder, "box_ventas"));
+        pag_inventario = GTK_WIDGET(gtk_builder_get_object(builder, "box_inventario"));
+
+	//se asigna el nombre a las paginas del notebook
+	gtk_notebook_set_tab_label_text(notebook, pag_ventas, "Ventas");
+        gtk_notebook_set_tab_label_text(notebook, pag_inventario, "Inventario");
+
+
 	//señal para conectar el boton de generar ticket con la funcion de callback cuando se haga click
 	if (btn_generar_ticket) {
     g_signal_connect(btn_generar_ticket, "clicked", G_CALLBACK(on_btn_generar_ticket_clicked), data);

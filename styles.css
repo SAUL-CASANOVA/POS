@@ -16,8 +16,40 @@ button:hover {
 button label {
 color: #4a2c2a; /*café*/
 }
+/*dentro del stack estan las paginas, lo dejo transparente para usar el color que aplique a todo lo demás*/
+notebook  stack {
+    background-color: transparent;
+    border-radius: 15px;
+    margin: 5px;
+}
 
-/*Estilos para el carrito de compras*/
+notebook header {
+    background-color: #ffcce6; /* Un rosa un poco más fuerte para distinguir las pestañas */
+    border-bottom: 3px solid #ffb3d9;
+    border-radius: 15px;
+}
+
+notebook{
+    border-radius: 20px;
+    border: 2px solid #ff66b2;
+    padding: 5px;
+}
+
+notebook header tabs tab {
+    background-color: #ffcce6;
+    padding: 10px;
+    border-top-left-radius: 15px;
+    border-top-right-radius: 15px;
+    border: 1px solid #ff66b2;
+    border-bottom: none;
+    font-weight: bold;
+}
+notebook header tabs tab:checked {
+    background-color: #ff66b2;
+    margin-top: -2px; /*para que sobresalga la pestaña seleccionada*/
+    color: white;
+}
+/*estilos para el carrito de compras*/
 columnview {
     background-color: #ffffff; /* Fondo blanco para los productos */
     border: 1px solid #ffb7c5;
