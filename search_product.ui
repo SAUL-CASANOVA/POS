@@ -5,7 +5,7 @@
   <requires lib="gtk" version="4.14"/>
   <object class="GtkWindow" id="search_window">
     <property name="css-classes">monika-window</property>
-    <property name="height-request">450</property>
+    <property name="height-request">500</property>
     <property name="hexpand">True</property>
     <property name="title">Añadir producto</property>
     <property name="titlebar">
@@ -44,24 +44,28 @@
                 <property name="vexpand">True</property>
                 <child>
                   <object class="GtkColumnViewColumn" id="col_id">
+                    <property name="expand">True</property>
                     <property name="resizable">True</property>
                     <property name="title">ID</property>
                   </object>
                 </child>
                 <child>
                   <object class="GtkColumnViewColumn" id="col_nombre">
+                    <property name="expand">True</property>
                     <property name="resizable">True</property>
                     <property name="title">Producto</property>
                   </object>
                 </child>
                 <child>
                   <object class="GtkColumnViewColumn" id="col_precio">
+                    <property name="expand">True</property>
                     <property name="resizable">True</property>
                     <property name="title">Precio U.(C/IVA)</property>
                   </object>
                 </child>
                 <child>
                   <object class="GtkColumnViewColumn" id="col_existencia">
+                    <property name="expand">True</property>
                     <property name="resizable">True</property>
                     <property name="title">Stock</property>
                   </object>

@@ -19,6 +19,17 @@ typedef struct {
     GListStore *venta_actual_store; //Almacen de la tabla de ventas principal
 } AppData;
 
+// Estructura auxiliar para pasar datos al callback de respuesta
+// para las funciones del area de inventario de agregar y eliminar...
+typedef struct {
+    AppData *data;
+    GtkWidget *ent_nom;
+    GtkWidget *ent_pre;
+    GtkWidget *ent_stk;
+    GtkWidget *win_dialog;
+    GtkBuilder *builder;
+} DialogData;
+
 //PROTOTIPOS DE FUNCIONES
 
 //activar ventana principal
@@ -58,6 +69,21 @@ void generar_ticket_archivo(AppData *data, GtkWidget *parent_window);
 //funcion para generar ticket al pulsar el boton de generar ticket
 void on_btn_generar_ticket_clicked(GtkButton *btn, gpointer user_data);
 
+//funcion para cargar el inventario de la base de datos a las columnas en la pagina de inventarios 
+void cargar_inventario(GtkColumnView *cv, sqlite3 *db);
+
+// CRUD DE INVENTARIOS
+// funcion para agregar producto cuando se pulsa el boton correspondiente  en la pagina de inventario
+void on_btn_inventario_agregar_clicked(GtkButton *btn, gpointer user_data);
+// funcion para eliminar producto cuando se pulsa el boton correspondiente en la pagina de inventario
+void on_btn_inventario_eliminar_clicked(GtkButton *btn, gpointer user_data);
+//apoyo para generar el producto
+static void on_guardar_nuevo_producto(GtkButton *btn, gpointer user_data);
+//funcion que elimina el producto si la funcion de eliminar el producto que generó el cuadro de dialogo se le pulsa que SI
+static void on_confirmar_eliminar_finish(GObject *source_object, GAsyncResult *res, gpointer user_data);
+
+
+//
 int main(int argc, char **argv){
 	GtkApplication *app;
 	int status;
@@ -202,13 +228,16 @@ static void activate(GtkApplication *app, gpointer user_data){
 	GtkWidget *pag_ventas; //pagina de ventas
 	GtkWidget *pag_inventario; //pagina de inventario
 	GtkNotebook *notebook; //contenedor de las pestañas o paginas
-
+	GtkWidget *pag_reportes; //pagina de reportes
+	GtkWidget *btn_add; //boton de añadir productos para el area de INVENTARIOS(parecido no igual :])
+	GtkWidget *btn_del; //boton de borrar producto para el area de INVENTARIOS
 
 	//crea el builder y cargar el archivo xml(.ui)
 	builder = gtk_builder_new_from_file("pos_ALPS.ui");
 
 	//obtener el objeto de ventana principal
 	window = GTK_WIDGET(gtk_builder_get_object(builder,"main_window"));
+
 
 	//pegar el puntero del builder a la ventana con etiqueta m_builder
 	g_object_set_data_full(G_OBJECT(window), "m_builder", builder, g_object_unref);
@@ -237,10 +266,25 @@ static void activate(GtkApplication *app, gpointer user_data){
 	notebook = GTK_NOTEBOOK(gtk_builder_get_object(builder, "nb_principal"));
 	pag_ventas = GTK_WIDGET(gtk_builder_get_object(builder, "box_ventas"));
         pag_inventario = GTK_WIDGET(gtk_builder_get_object(builder, "box_inventario"));
-
+	pag_reportes = GTK_WIDGET(gtk_builder_get_object(builder, "box_reportes"));
+	
 	//se asigna el nombre a las paginas del notebook
-	gtk_notebook_set_tab_label_text(notebook, pag_ventas, "Ventas");
-        gtk_notebook_set_tab_label_text(notebook, pag_inventario, "Inventario");
+	gtk_notebook_set_tab_label_text(notebook, pag_ventas, "VENTAS");
+        gtk_notebook_set_tab_label_text(notebook, pag_inventario, "INVENTARIO");
+ 	gtk_notebook_set_tab_label_text(notebook, pag_reportes, "REPORTES");
+
+	//se obtienen los objetos para los botones de la pagina de inventarios
+	btn_add = GTK_WIDGET(gtk_builder_get_object(builder, "btn_añadir_nuevo"));
+	btn_del = GTK_WIDGET(gtk_builder_get_object(builder, "btn_eliminar"));
+
+	//se usa la señal para conectar el boton cuando se de click y se usan las funciones para agregar o eliminar	
+    if (btn_add) {
+        g_signal_connect(btn_add, "clicked", G_CALLBACK(on_btn_inventario_agregar_clicked), data);
+    }
+
+    if (btn_del) {
+        g_signal_connect(btn_del, "clicked", G_CALLBACK(on_btn_inventario_eliminar_clicked), data);
+    }
 
 
 	//señal para conectar el boton de generar ticket con la funcion de callback cuando se haga click
@@ -261,6 +305,24 @@ static void activate(GtkApplication *app, gpointer user_data){
 	if (btn_cancelar) {
         g_signal_connect(btn_cancelar, "clicked", G_CALLBACK(on_btn_cancelar_venta_clicked), data);
     }
+
+
+	// --- LÓGICA PARA LA PESTAÑA DE INVENTARIO ---
+
+    // 1. Configurar las columnas del inventario (Factories)
+    // Esto vincula los IDs col_id, col_nombre, etc., del XML con las funciones de producto.c
+    producto_configurar_columnas(builder);
+
+    // 2. Obtener el ColumnView del inventario desde el XML
+    GtkColumnView *cv_inv = GTK_COLUMN_VIEW(gtk_builder_get_object(builder, "cv_inventario"));
+
+    // 3. Cargar los datos de la base de datos a la tabla
+    if (cv_inv) {
+        cargar_inventario(cv_inv, data->db);
+    } else {
+        g_warning("No se encontró el objeto 'cv_inventario' en el archivo .ui");
+    }
+
 
 	//mostrar la ventana
 	gtk_window_present(GTK_WINDOW(window));
@@ -574,5 +636,212 @@ void on_btn_generar_ticket_clicked(GtkButton *btn, gpointer user_data) {
         if (builder_principal) {
             actualizar_resumen(builder_principal);
         }
+    }
+}
+
+void cargar_inventario(GtkColumnView *cv, sqlite3 *db) {
+    GListStore *store = NULL;
+    GtkSelectionModel *sel_model = gtk_column_view_get_model(cv);
+
+    // 1. Intentar recuperar el store existente para no crear uno nuevo cada vez
+    if (sel_model != NULL) {
+        store = G_LIST_STORE(gtk_single_selection_get_model(GTK_SINGLE_SELECTION(sel_model)));
+        // LIMPIAR el store actual para que no se dupliquen los productos
+        g_list_store_remove_all(store);
+    } else {
+        // Si es la primera vez que se carga, creamos el store y lo asignamos
+        store = g_list_store_new(PRODUCTO_TYPE_OBJ);
+        GtkSingleSelection *selection = gtk_single_selection_new(G_LIST_MODEL(store));
+        gtk_column_view_set_model(cv, GTK_SELECTION_MODEL(selection));
+        g_object_unref(selection); // El ColumnView ya tiene la referencia
+    }
+
+    // 2. Obtener los datos actualizados de la base de datos
+    GList *lista_db = obtener_lista_productos_db(db);
+
+    // 3. Meter los objetos nuevos al store
+    for (GList *l = lista_db; l != NULL; l = l->next) {
+        g_list_store_append(store, l->data);
+    }
+
+    // 4. Liberar la lista temporal
+    g_list_free(lista_db);
+}
+
+
+void on_btn_inventario_agregar_clicked(GtkButton *btn, gpointer user_data) {
+    AppData *data = (AppData *)user_data;
+    GtkWindow *parent = GTK_WINDOW(gtk_widget_get_root(GTK_WIDGET(btn)));
+	
+	GtkBuilder *main_builder = g_object_get_data(G_OBJECT(parent), "m_builder");
+
+    GtkWidget *win = gtk_window_new();
+    gtk_window_set_title(GTK_WINDOW(win), "Agregar Nuevo Producto");
+    gtk_window_set_transient_for(GTK_WINDOW(win), parent);
+    gtk_window_set_modal(GTK_WINDOW(win), TRUE);
+    gtk_window_set_resizable(GTK_WINDOW(win), FALSE);
+    
+    // Contenedor principal con márgenes
+    GtkWidget *vbox = gtk_box_new(GTK_ORIENTATION_VERTICAL, 15);
+    gtk_widget_set_margin_start(vbox, 20);
+    gtk_widget_set_margin_end(vbox, 20);
+    gtk_widget_set_margin_top(vbox, 20);
+    gtk_widget_set_margin_bottom(vbox, 20);
+    gtk_window_set_child(GTK_WINDOW(win), vbox);
+
+    // Título de la ventana
+    GtkWidget *lbl_titulo = gtk_label_new(NULL);
+    gtk_label_set_markup(GTK_LABEL(lbl_titulo), "<b>Ingrese los datos del producto</b>");
+    gtk_box_append(GTK_BOX(vbox), lbl_titulo);
+
+    // Usamos un Grid para alinear Labels y Entrys
+    GtkWidget *grid = gtk_grid_new();
+    gtk_grid_set_column_spacing(GTK_GRID(grid), 10);
+    gtk_grid_set_row_spacing(GTK_GRID(grid), 10);
+    gtk_box_append(GTK_BOX(vbox), grid);
+
+    // Preparar estructura de datos
+    DialogData *d = g_new0(DialogData, 1);
+    d->data = data;
+    d->win_dialog = win;
+    d->builder = main_builder;
+    d->ent_nom = gtk_entry_new();
+    d->ent_pre = gtk_entry_new();
+    d->ent_stk = gtk_entry_new();
+
+    // FILA 0: Nombre
+    GtkWidget *lbl_nom = gtk_label_new("Nombre:");
+    gtk_widget_set_halign(lbl_nom, GTK_ALIGN_END);
+    gtk_grid_attach(GTK_GRID(grid), lbl_nom, 0, 0, 1, 1);
+    gtk_grid_attach(GTK_GRID(grid), d->ent_nom, 1, 0, 1, 1);
+    gtk_widget_set_hexpand(d->ent_nom, TRUE);
+
+    // FILA 1: Precio
+    GtkWidget *lbl_pre = gtk_label_new("Precio ($):");
+    gtk_widget_set_halign(lbl_pre, GTK_ALIGN_END);
+    gtk_grid_attach(GTK_GRID(grid), lbl_pre, 0, 1, 1, 1);
+    gtk_grid_attach(GTK_GRID(grid), d->ent_pre, 1, 1, 1, 1);
+
+    // FILA 2: Stock
+    GtkWidget *lbl_stk = gtk_label_new("Existencia:");
+    gtk_widget_set_halign(lbl_stk, GTK_ALIGN_END);
+    gtk_grid_attach(GTK_GRID(grid), lbl_stk, 0, 2, 1, 1);
+    gtk_grid_attach(GTK_GRID(grid), d->ent_stk, 1, 2, 1, 1);
+
+    // Botón de acción
+    GtkWidget *btn_save = gtk_button_new_with_label("Guardar Producto");
+    gtk_widget_add_css_class(btn_save, "suggested-action");
+    gtk_widget_set_margin_top(btn_save, 10);
+    g_signal_connect(btn_save, "clicked", G_CALLBACK(on_guardar_nuevo_producto), d);
+    
+    gtk_box_append(GTK_BOX(vbox), btn_save);
+
+    // Limpieza de memoria al cerrar
+    g_signal_connect_swapped(win, "destroy", G_CALLBACK(g_free), d);
+
+    gtk_window_present(GTK_WINDOW(win));
+}
+
+static void on_guardar_nuevo_producto(GtkButton *btn, gpointer user_data) {
+    DialogData *d = (DialogData *)user_data;
+
+    // 1. Extraer los datos de las cajas de texto (Entrys)
+    const char *nombre = gtk_editable_get_text(GTK_EDITABLE(d->ent_nom));
+    const char *txt_precio = gtk_editable_get_text(GTK_EDITABLE(d->ent_pre));
+    const char *txt_stock = gtk_editable_get_text(GTK_EDITABLE(d->ent_stk));
+
+    // Convertir strings a valores numéricos
+    double precio = atof(txt_precio);
+    int stock = atoi(txt_stock);
+
+    // 2. Validar que al menos tenga nombre antes de procesar
+    if (strlen(nombre) > 0) {
+        
+        // Intentar la inserción en la base de datos SQLite
+        if (db_insertar_producto(d->data->db, nombre, precio, stock)) {
+            
+            // 3. Refrescar la tabla (ColumnView) usando el builder guardado en d
+            if (d->builder && GTK_IS_BUILDER(d->builder)) {
+                
+                // Obtenemos el ColumnView del inventario usando su ID del archivo .ui
+                GtkColumnView *cv = GTK_COLUMN_VIEW(gtk_builder_get_object(d->builder, "cv_inventario"));
+                
+                if (cv) {
+                    g_print("Producto guardado exitosamente: %s. Refrescando tabla...\n", nombre);
+                    
+                    // Llamamos a la función que limpia el store y recarga desde la DB
+                    cargar_inventario(cv, d->data->db);
+                } else {
+                    g_print("Error: No se encontró el objeto 'cv_inventario' en el builder.\n");
+                }
+                
+            } else {
+                g_print("Error: El puntero del builder en DialogData es nulo o inválido.\n");
+            }
+
+            // 4. Cerrar la ventana de diálogo de "Añadir"
+            if (d->win_dialog && GTK_IS_WINDOW(d->win_dialog)) {
+                gtk_window_destroy(GTK_WINDOW(d->win_dialog));
+            }
+        } else {
+            g_print("Error: No se pudo insertar el producto en la base de datos.\n");
+        }
+    } else {
+        g_print("Advertencia: El nombre del producto no puede estar vacío.\n");
+    }
+}
+
+void on_btn_inventario_eliminar_clicked(GtkButton *btn, gpointer user_data) {
+    AppData *data = (AppData *)user_data;
+    GtkWindow *main_win = GTK_WINDOW(gtk_widget_get_root(GTK_WIDGET(btn)));
+    
+    // Aseguramos que data esté disponible en la ventana para el callback
+    g_object_set_data(G_OBJECT(main_win), "app_data", data);
+
+    // Configuramos el diálogo de alerta
+    GtkAlertDialog *dialog = gtk_alert_dialog_new("¿Eliminar producto?");
+    gtk_alert_dialog_set_detail(dialog, "Esta acción no se puede deshacer. ¿Estás seguro?");
+    
+    // El primer botón (índice 0) será el de eliminar
+    const char *botones[] = {"Eliminar", "Cancelar", NULL};
+    gtk_alert_dialog_set_buttons(dialog, botones);
+    gtk_alert_dialog_set_cancel_button(dialog, 1); // El botón 1 (Cancelar) es el de escape
+   
+   //aparentemente la version de gtk tiene que ser muy nueva asi que lo comentamos ni modo
+   // gtk_alert_dialog_set_destructive_button(dialog, 0); // El botón 0 se pone rojo
+
+    // Lanzamos el diálogo
+    gtk_alert_dialog_choose(dialog, main_win, NULL, on_confirmar_eliminar_finish, main_win);
+    
+    g_object_unref(dialog);
+}
+
+
+
+static void on_confirmar_eliminar_finish(GObject *source_object, GAsyncResult *res, gpointer user_data) {
+    GtkAlertDialog *dialog = GTK_ALERT_DIALOG(source_object);
+    GtkWindow *parent = GTK_WINDOW(user_data); // Pasamos la ventana principal como user_data
+    int response = gtk_alert_dialog_choose_finish(dialog, res, NULL);
+
+    //los botones se cuentan por el índice (0 es el primero que agregamos)
+    if (response == 0) {
+        // Recuperamos los datos necesarios para borrar
+        GtkBuilder *builder = g_object_get_data(G_OBJECT(parent), "m_builder");
+        AppData *data = g_object_get_data(G_OBJECT(parent), "app_data");
+        GtkColumnView *cv = GTK_COLUMN_VIEW(gtk_builder_get_object(builder, "cv_inventario"));
+
+        GtkSelectionModel *model = gtk_column_view_get_model(cv);
+        GtkBitset *selection = gtk_selection_model_get_selection(model);
+
+        if (!gtk_bitset_is_empty(selection)) {
+            guint pos = gtk_bitset_get_nth(selection, 0);
+            ProductoObj *p = g_list_model_get_item(G_LIST_MODEL(model), pos);
+
+            if (db_eliminar_producto(data->db, producto_obj_get_id(p))) {
+                cargar_inventario(cv, data->db);
+            }
+            g_object_unref(p);
+        }
+        gtk_bitset_unref(selection);
     }
 }

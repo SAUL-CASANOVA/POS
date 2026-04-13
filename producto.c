@@ -1,4 +1,5 @@
 #include "producto.h"
+#include <sqlite3.h>
 
 typedef struct {
     double subtotal;
@@ -256,4 +257,32 @@ void configurar_columnas_venta(GtkBuilder *builder, GListStore *venta_store) {
             g_object_unref(factory);
         }
     }
+}
+
+GList* obtener_lista_productos_db(sqlite3 *db) {
+    GList *lista = NULL;
+    sqlite3_stmt *stmt;
+    // Seleccionamos los campos exactos que pide ProductoObj_new
+    const char *sql = "SELECT id, nombre, precio, existencia FROM productos;";
+
+    if (sqlite3_prepare_v2(db, sql, -1, &stmt, NULL) != SQLITE_OK) {
+        g_warning("Error en la base de datos: %s", sqlite3_errmsg(db));
+        return NULL;
+    }
+
+    while (sqlite3_step(stmt) == SQLITE_ROW) {
+        int id = sqlite3_column_int(stmt, 0);
+        const char *nombre = (const char*)sqlite3_column_text(stmt, 1);
+        double precio = sqlite3_column_double(stmt, 2);
+        int existencia = sqlite3_column_int(stmt, 3);
+
+  	//utilizamos el constructor
+        ProductoObj *p = producto_obj_new(id, nombre, precio, existencia);
+
+        // Lo añadimos a una lista temporal de GLib
+        lista = g_list_append(lista, p);
+    }
+
+    sqlite3_finalize(stmt);
+    return lista;
 }

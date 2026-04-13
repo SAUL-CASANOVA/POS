@@ -59,36 +59,43 @@
                         <property name="show-row-separators">True</property>
                         <child>
                           <object class="GtkColumnViewColumn" id="id_column_view">
+                            <property name="expand">True</property>
                             <property name="title">ID</property>
                           </object>
                         </child>
                         <child>
                           <object class="GtkColumnViewColumn" id="producto_column_view">
+                            <property name="expand">True</property>
                             <property name="title">PRODUCTO</property>
                           </object>
                         </child>
                         <child>
                           <object class="GtkColumnViewColumn" id="cant_column_view">
+                            <property name="expand">True</property>
                             <property name="title">CANTIDAD</property>
                           </object>
                         </child>
                         <child>
                           <object class="GtkColumnViewColumn" id="precio_column_view">
+                            <property name="expand">True</property>
                             <property name="title">PRECIO U.(SIN IVA)</property>
                           </object>
                         </child>
                         <child>
                           <object class="GtkColumnViewColumn" id="iva_column_view">
+                            <property name="expand">True</property>
                             <property name="title">IVA</property>
                           </object>
                         </child>
                         <child>
                           <object class="GtkColumnViewColumn" id="descuento_column_view">
+                            <property name="expand">True</property>
                             <property name="title">C/DESC</property>
                           </object>
                         </child>
                         <child>
                           <object class="GtkColumnViewColumn" id="eliminar_column_view">
+                            <property name="expand">True</property>
                             <property name="title">ELIMINAR PRODUCTO</property>
                           </object>
                         </child>
@@ -219,6 +226,72 @@ frame-resumen</property>
         </child>
         <child>
           <object class="GtkBox" id="box_inventario">
+            <property name="margin-bottom">15</property>
+            <property name="margin-end">15</property>
+            <property name="margin-start">15</property>
+            <property name="margin-top">15</property>
+            <property name="orientation">vertical</property>
+            <property name="spacing">10</property>
+            <child>
+              <object class="GtkBox">
+                <property name="spacing">10</property>
+                <child>
+                  <object class="GtkButton" id="btn_añadir_nuevo">
+                    <property name="label">[+] Añadir Nuevo</property>
+                  </object>
+                </child>
+                <child>
+                  <object class="GtkButton">
+                    <property name="label">[✎] Editar:</property>
+                  </object>
+                </child>
+                <child>
+                  <object class="GtkButton" id="btn_eliminar">
+                    <property name="label">[🗑] Eliminar</property>
+                  </object>
+                </child>
+              </object>
+            </child>
+            <child>
+              <object class="GtkScrolledWindow">
+                <property name="hexpand">True</property>
+                <property name="vexpand">True</property>
+                <child>
+                  <object class="GtkColumnView" id="cv_inventario">
+                    <property name="hexpand">True</property>
+                    <property name="vexpand">True</property>
+                    <child>
+                      <object class="GtkColumnViewColumn" id="col_id">
+                        <property name="expand">True</property>
+                        <property name="title">ID</property>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="GtkColumnViewColumn" id="col_nombre">
+                        <property name="expand">True</property>
+                        <property name="title">Nombre</property>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="GtkColumnViewColumn" id="col_existencia">
+                        <property name="expand">True</property>
+                        <property name="title">Stock</property>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="GtkColumnViewColumn" id="col_precio">
+                        <property name="expand">True</property>
+                        <property name="title">Precio</property>
+                      </object>
+                    </child>
+                  </object>
+                </child>
+              </object>
+            </child>
+          </object>
+        </child>
+        <child>
+          <object class="GtkBox" id="box_reportes">
             <property name="orientation">vertical</property>
           </object>
         </child>

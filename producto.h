@@ -1,6 +1,7 @@
 #ifndef PRODUCTO_H
 #define PRODUCTO_H
 
+#include <sqlite3.h>
 #include <gtk/gtk.h>
 
 /* --- Este archivo define la estructura y las funciones públicas para crear y destruir objetos */
@@ -33,4 +34,6 @@ void on_ventas_eliminar_setup(GtkSignalListItemFactory *factory, GtkListItem *li
 void on_ventas_eliminar_bind(GtkSignalListItemFactory *factory, GtkListItem *list_item);
 void configurar_columnas_venta(GtkBuilder *builder, GListStore *store);
 void on_setup_label(GtkSignalListItemFactory *factory, GtkListItem *list_item);
+GList* obtener_lista_productos_db(sqlite3 *db);
+
 #endif
