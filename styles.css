@@ -171,7 +171,7 @@ color: #4a2c2a; /*café para texto*/
 font-weight: 800;
 /*suavizar transicion*/
 transition: all 0.2s ease-in-out;
-}
+font-family: monospace;}
 
 /*se hace el background color para todos los widgets con la clase en resumen */
  .panel-resumen {
