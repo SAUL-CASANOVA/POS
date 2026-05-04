@@ -292,7 +292,41 @@ frame-resumen</property>
         </child>
         <child>
           <object class="GtkBox" id="box_reportes">
+            <property name="margin-bottom">20</property>
+            <property name="margin-end">20</property>
+            <property name="margin-start">20</property>
+            <property name="margin-top">20</property>
             <property name="orientation">vertical</property>
+            <child>
+              <object class="GtkDrawingArea" id="area_grafico_ventas">
+                <property name="hexpand">True</property>
+                <property name="vexpand">True</property>
+              </object>
+            </child>
+          </object>
+        </child>
+        <child>
+          <object class="GtkBox" id="box_juego">
+            <property name="hexpand">True</property>
+            <child>
+              <object class="GtkBox">
+                <property name="hexpand">True</property>
+                <property name="margin-bottom">15</property>
+                <property name="margin-end">15</property>
+                <property name="margin-start">15</property>
+                <property name="margin-top">15</property>
+                <child>
+                  <object class="GtkImage" id="dino">
+                    <property name="file">assets/suelo.png</property>
+                    <property name="height-request">50</property>
+                    <property name="hexpand">True</property>
+                    <property name="margin-bottom">15</property>
+                    <property name="vexpand">True</property>
+                    <property name="width-request">600</property>
+                  </object>
+                </child>
+              </object>
+            </child>
           </object>
         </child>
       </object>

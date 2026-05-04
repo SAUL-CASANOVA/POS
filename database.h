@@ -39,4 +39,7 @@ bool db_registrar_venta(sqlite3* db, int id_producto, int cantidad, double total
 // Devuelve una lista de las ventas realizadas 
 void db_listar_ventas(sqlite3* db);
 
+//funcion para obtener los totales de ventas por mes para devolver un arreglo para la funcion que dibuja la grafica de ventas por mes en la pagina de reportes
+void db_obtener_totales_grafico(sqlite3 *db, double totales[], int n);
+
 #endif

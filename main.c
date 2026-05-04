@@ -2,6 +2,8 @@
 #include "producto.h"
 #include "database.h"
 #include <string.h>
+#include <cairo.h> //libreria para los gráficos
+#include <math.h> 
 
 //Estructura para la venta
 typedef struct {
@@ -82,6 +84,9 @@ static void on_guardar_nuevo_producto(GtkButton *btn, gpointer user_data);
 //funcion que elimina el producto si la funcion de eliminar el producto que generó el cuadro de dialogo se le pulsa que SI
 static void on_confirmar_eliminar_finish(GObject *source_object, GAsyncResult *res, gpointer user_data);
 
+//funcion para dibuja la grafica de reporte de venta
+static void draw_func_ventas(GtkDrawingArea *area, cairo_t *cr, 
+                             int width, int height, gpointer user_data);
 
 //
 int main(int argc, char **argv){
@@ -231,6 +236,8 @@ static void activate(GtkApplication *app, gpointer user_data){
 	GtkWidget *pag_reportes; //pagina de reportes
 	GtkWidget *btn_add; //boton de añadir productos para el area de INVENTARIOS(parecido no igual :])
 	GtkWidget *btn_del; //boton de borrar producto para el area de INVENTARIOS
+	GtkWidget *dino_imag; //imagen del dino lol
+	GtkWidget *grafico; //grafico para pestaña de reportes
 
 	//crea el builder y cargar el archivo xml(.ui)
 	builder = gtk_builder_new_from_file("pos_ALPS.ui");
@@ -268,6 +275,18 @@ static void activate(GtkApplication *app, gpointer user_data){
         pag_inventario = GTK_WIDGET(gtk_builder_get_object(builder, "box_inventario"));
 	pag_reportes = GTK_WIDGET(gtk_builder_get_object(builder, "box_reportes"));
 	
+	dino_imag = GTK_WIDGET(gtk_builder_get_object(builder, "dino"));
+
+	grafico = GTK_WIDGET(gtk_builder_get_object(builder, "area_grafico_ventas"));
+
+	//Conectar la función de dibujo si el widget existe (pestaña de reportes)
+    if (grafico) {
+        gtk_drawing_area_set_draw_func(GTK_DRAWING_AREA(grafico),
+                                       draw_func_ventas, // La función con Cairo
+                                       data,             // Pasamos AppData para acceder a la DB
+                                       NULL);
+    }
+
 	//se asigna el nombre a las paginas del notebook
 	gtk_notebook_set_tab_label_text(notebook, pag_ventas, "VENTAS");
         gtk_notebook_set_tab_label_text(notebook, pag_inventario, "INVENTARIO");
@@ -570,7 +589,17 @@ void generar_ticket_archivo(AppData *data, GtkWidget *parent_window) {
     guint n_items = g_list_model_get_n_items(G_LIST_MODEL(data->venta_actual_store));
     for (guint i = 0; i < n_items; i++) {
         ProductoObj *p = g_list_model_get_item(G_LIST_MODEL(data->venta_actual_store), i);
-        fprintf(f, "%-25s x%-5d $%10.2f\n", 
+ 
+	//GUARDAR VENTA EN SQL TABLA VENTA
+	int id_p = producto_obj_get_id(p);
+        int cant = producto_obj_get_cantidad(p);
+        double total_linea = producto_obj_get_precio(p) * cant;
+
+        // Llamamos a la función de database.c 
+        db_registrar_venta(data->db, id_p, cant, total_linea);
+        // ---------------------------------------------- 
+
+	fprintf(f, "%-25s x%-5d $%10.2f\n", 
                 producto_obj_get_nombre(p), 
                 producto_obj_get_cantidad(p),
                 producto_obj_get_precio(p) * producto_obj_get_cantidad(p));
@@ -610,31 +639,32 @@ void generar_ticket_archivo(AppData *data, GtkWidget *parent_window) {
 void on_btn_generar_ticket_clicked(GtkButton *btn, gpointer user_data) {
     AppData *data = (AppData *)user_data;
    
-    // Verificamos que haya algo que vender
     if (g_list_model_get_n_items(G_LIST_MODEL(data->venta_actual_store)) == 0) {
         return; 
     }    
 
-    // Obtenemos la ventana raíz para que el diálogo sepa dónde aparecer
     GtkWidget *root = GTK_WIDGET(gtk_widget_get_root(GTK_WIDGET(btn)));
-
-    // Generamos el archivo
     generar_ticket_archivo(data, root);
 
-    //lógica de limpieza para borrar los elementos del carrito cuando ya se generó el ticket
-    //Borrar los elementos de la GListStore
+    // Limpieza de la venta
     g_list_store_remove_all(data->venta_actual_store);
-
-    //Reiniciar los valores lógicos de la venta
     venta.subtotal = 0.0;
     venta.iva = 0.0;
     venta.total = 0.0;
 
     GtkWindow *main_win = gtk_application_get_active_window(GTK_APPLICATION(g_application_get_default()));
     if (main_win) {
+        // Obtenemos el builder que guardamos en 'activate'
         GtkBuilder *builder_principal = g_object_get_data(G_OBJECT(main_win), "m_builder");
+        
         if (builder_principal) {
+            //Actualizamos los labels (subtotal, total, etc)
             actualizar_resumen(builder_principal);
+
+            GtkWidget *area_grafico = GTK_WIDGET(gtk_builder_get_object(builder_principal, "area_grafico_ventas"));
+            if (area_grafico) {
+                gtk_widget_queue_draw(area_grafico); 
+            }
         }
     }
 }
@@ -843,5 +873,79 @@ static void on_confirmar_eliminar_finish(GObject *source_object, GAsyncResult *r
             g_object_unref(p);
         }
         gtk_bitset_unref(selection);
+    }
+}
+
+static void draw_func_ventas(GtkDrawingArea *area, cairo_t *cr,
+                             int width, int height, gpointer user_data) {
+    AppData *data = (AppData *)user_data; 
+    int n_meses = 5;
+    double ventas[5] = {0};
+    const char *meses[] = {"Ene", "Feb", "Mar", "Abr", "May"};
+
+    // Obtener datos reales de SQLite
+    db_obtener_totales_grafico(data->db, ventas, n_meses);
+
+    //Fondo del área de dibujo
+    cairo_set_source_rgb(cr, 1.0, 0.95, 0.96); // Rosa muy pálido
+    cairo_paint(cr);
+
+    //Configuración de dimensiones
+    double margen_inferior = 40.0;
+    double margen_superior = 40.0;
+    double ancho_barra = (width / n_meses) * 0.6;
+    double espacio = (width / n_meses) * 0.4;
+
+    // Encontrar el valor máximo para escalar el gráfico
+    double max_venta = 1.0;
+    for (int i = 0; i < n_meses; i++) {
+        if (ventas[i] > max_venta) max_venta = ventas[i];
+    }
+
+    //Dibujar las barras
+    for (int i = 0; i < n_meses; i++) {
+        double x = (i * (ancho_barra + espacio)) + (espacio / 2);
+        // Calculamos la altura proporcional al área disponible
+        double barra_h = (ventas[i] / max_venta) * (height - margen_inferior - margen_superior);
+
+        // Crear degradado estilo Doki Doki
+        cairo_pattern_t *pat = cairo_pattern_create_linear(x, height - margen_inferior - barra_h,
+                                                           x, height - margen_inferior);
+        cairo_pattern_add_color_stop_rgb(pat, 0.0, 1.0, 0.48, 0.66); // Rosa Fuerte (#ff7ba9)
+        cairo_pattern_add_color_stop_rgb(pat, 1.0, 1.0, 0.85, 0.91); // Rosa Claro (#ffdae9)
+
+        // Dibujar barra con bordes superiores redondeados
+        double radius = 10.0;
+        if (barra_h > 0) {
+            cairo_new_sub_path(cr);
+            cairo_arc(cr, x + radius, height - margen_inferior - barra_h + radius, radius, M_PI, 3 * M_PI / 2);
+            cairo_arc(cr, x + ancho_barra - radius, height - margen_inferior - barra_h + radius, radius, 3 * M_PI / 2, 2 * M_PI);
+            cairo_line_to(cr, x + ancho_barra, height - margen_inferior);
+            cairo_line_to(cr, x, height - margen_inferior);
+            cairo_close_path(cr);
+
+            cairo_set_source(cr, pat);
+            cairo_fill(cr);
+            cairo_pattern_destroy(pat);
+        }
+
+        // 5. Dibujar etiquetas de los meses[cite: 6]
+        cairo_set_source_rgb(cr, 0.29, 0.17, 0.16); // Color café oscuro de tu CSS
+        cairo_select_font_face(cr, "Sans", CAIRO_FONT_SLANT_NORMAL, CAIRO_FONT_WEIGHT_BOLD);
+        cairo_set_font_size(cr, 13.0);
+
+        cairo_text_extents_t extents;
+        cairo_text_extents(cr, meses[i], &extents);
+        cairo_move_to(cr, x + (ancho_barra / 2) - (extents.width / 2), height - 15);
+        cairo_show_text(cr, meses[i]);
+
+        // Mostrar el monto encima de la barra
+        if (ventas[i] > 0) {
+            char monto_str[20];
+            snprintf(monto_str, sizeof(monto_str), "$%.0f", ventas[i]);
+            cairo_set_font_size(cr, 11.0);
+            cairo_move_to(cr, x + (ancho_barra / 2) - 15, height - margen_inferior - barra_h - 10);
+            cairo_show_text(cr, monto_str);
+        }
     }
 }

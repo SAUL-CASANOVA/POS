@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<gresources>
+  <gresource prefix="/besto/team/struct">
+   <file>assets/icons8-doki-doki.png</file>
+  </gresource>
+</gresources>

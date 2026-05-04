@@ -93,9 +93,10 @@ bool db_registrar_venta(sqlite3* db, int id_producto, int cantidad, double total
     // 1. Iniciamos transacción
     sqlite3_exec(db, "BEGIN TRANSACTION;", 0, 0, 0);
 
-    // Registro en la tabla de ventas
+    // Registro en la tabla de ventas - Agregamos la columna fecha_hora
     char *sql_venta = sqlite3_mprintf(
-        "INSERT INTO ventas (id_producto, cantidad_vendida, total_venta) VALUES (%d, %d, %f);",
+        "INSERT INTO ventas (id_producto, cantidad_vendida, total_venta, fecha_hora) "
+        "VALUES (%d, %d, %lf, datetime('now', 'localtime'));",
         id_producto, cantidad, total
     );
     
@@ -103,7 +104,7 @@ bool db_registrar_venta(sqlite3* db, int id_producto, int cantidad, double total
     sqlite3_free(sql_venta);
 
     if (rc != SQLITE_OK) {
-        sqlite3_exec(db, "ROLLBACK;", 0, 0, 0); // Cancela si algo falla
+        sqlite3_exec(db, "ROLLBACK;", 0, 0, 0); 
         fprintf(stderr, "Error en registro de venta: %s\n", err_msg);
         sqlite3_free(err_msg);
         return false;
@@ -129,6 +130,7 @@ bool db_registrar_venta(sqlite3* db, int id_producto, int cantidad, double total
     sqlite3_exec(db, "COMMIT;", 0, 0, 0);
     return true;
 }
+
 
 // Implementación de la búsqueda (ejemplo base)
 void db_consultar_producto(sqlite3* db, int id_producto) {
@@ -174,4 +176,34 @@ bool db_eliminar_producto(sqlite3* db, int id_producto) {
     }
     g_print("Producto ID %d eliminado exitosamente.\n", id_producto);
     return true;
+}
+
+
+
+
+/* --- MANEJO DE DATOS PARA LOS GRAFICOS DE LA PAGINA DE REPORTES --- */
+
+void db_obtener_totales_grafico(sqlite3 *db, double totales[], int n) {
+    sqlite3_stmt *stmt;
+    const char *sql = "SELECT SUM(total_venta) FROM ventas WHERE strftime('%m', fecha_hora) = ?;";
+
+    for (int i = 0; i < n; i++) {
+        if (sqlite3_prepare_v2(db, sql, -1, &stmt, NULL) == SQLITE_OK) {
+            char mes_str[16];
+            // Para el mes actual (Mayo), i+1 sería "05"
+            sprintf(mes_str, "%02d", i + 1);
+            sqlite3_bind_text(stmt, 1, mes_str, -1, SQLITE_STATIC);
+
+            if (sqlite3_step(stmt) == SQLITE_ROW) {
+                totales[i] = sqlite3_column_double(stmt, 0);
+	
+	printf("Mes %02d: Total extraído = %.2f\n", i + 1, totales[i]);
+
+
+	    } else {
+                totales[i] = 0.0;
+            }
+            sqlite3_finalize(stmt);
+        }
+    }
 }
