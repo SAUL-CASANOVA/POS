@@ -32,6 +32,13 @@ typedef struct {
     GtkBuilder *builder;
 } DialogData;
 
+//Estructura para pasar widgets de imagen y label para pagina 4 de agradecimientos
+typedef struct {
+    GtkLabel *label;
+    GtkWidget *imagen;
+    GtkWidget *box;
+} ElementosDialogo;
+
 //PROTOTIPOS DE FUNCIONES
 
 //activar ventana principal
@@ -87,6 +94,12 @@ static void on_confirmar_eliminar_finish(GObject *source_object, GAsyncResult *r
 //funcion para dibuja la grafica de reporte de venta
 static void draw_func_ventas(GtkDrawingArea *area, cairo_t *cr, 
                              int width, int height, gpointer user_data);
+
+//funcion para utilizar el boton de siguiente de la pagina de agradecimientos
+void on_btn_avanzar_clicked(GtkButton *btn, gpointer user_data);
+
+//funcion para cambiar a escena final (cambio de imagen de fondo despues de que se pulso el maximo de veces el boton de la pagina de agradecimientos)
+gboolean cambiar_a_escena_final(gpointer user_data);
 
 //
 int main(int argc, char **argv){
@@ -234,14 +247,16 @@ static void activate(GtkApplication *app, gpointer user_data){
 	GtkWidget *pag_inventario; //pagina de inventario
 	GtkNotebook *notebook; //contenedor de las pestañas o paginas
 	GtkWidget *pag_reportes; //pagina de reportes
+    GtkWidget *pag_agradecimientos; //pagina de agradecimientos
 	GtkWidget *btn_add; //boton de añadir productos para el area de INVENTARIOS(parecido no igual :])
 	GtkWidget *btn_del; //boton de borrar producto para el area de INVENTARIOS
 	GtkWidget *dino_imag; //imagen del dino lol
 	GtkWidget *grafico; //grafico para pestaña de reportes
-
-	//crea el builder y cargar el archivo xml(.ui)
-	builder = gtk_builder_new_from_file("pos_ALPS.ui");
-
+    GtkWidget *lbl_dialogo; //label para pestaña de agradecimientos
+    GtkWidget *btn_avanzar; //boton para cambiar de dialogo en ventana de agradecimientos
+	GtkWidget *box_rosa; //box que tiene los circulos rosados con texto para agradecimientos
+    //crea el builder y cargar el archivo xml(.ui) usando recurso de xml
+	builder = gtk_builder_new_from_resource("/besto/team/struct/pos_ALPS.ui");
 	//obtener el objeto de ventana principal
 	window = GTK_WIDGET(gtk_builder_get_object(builder,"main_window"));
 
@@ -274,10 +289,25 @@ static void activate(GtkApplication *app, gpointer user_data){
 	pag_ventas = GTK_WIDGET(gtk_builder_get_object(builder, "box_ventas"));
         pag_inventario = GTK_WIDGET(gtk_builder_get_object(builder, "box_inventario"));
 	pag_reportes = GTK_WIDGET(gtk_builder_get_object(builder, "box_reportes"));
-	
+	pag_agradecimientos = GTK_WIDGET(gtk_builder_get_object(builder, "box_juego"));
 	dino_imag = GTK_WIDGET(gtk_builder_get_object(builder, "dino"));
 
-	grafico = GTK_WIDGET(gtk_builder_get_object(builder, "area_grafico_ventas"));
+    gtk_picture_set_resource(GTK_PICTURE(dino_imag), "/besto/team/struct/assets/Mon1.png");
+	
+    grafico = GTK_WIDGET(gtk_builder_get_object(builder, "area_grafico_ventas"));
+
+    lbl_dialogo = GTK_WIDGET(gtk_builder_get_object(builder, "lbl_dialogo"));
+    btn_avanzar = GTK_WIDGET(gtk_builder_get_object(builder, "btn_avanzar"));
+    box_rosa = GTK_WIDGET(gtk_builder_get_object(builder, "box_dialogo"));    
+
+    // llenar estructura con widgets para enviar al signal para cambiar imagen y label en pagina de agradecimientos
+    static ElementosDialogo datos_pestaña4;
+    datos_pestaña4.label = GTK_LABEL(lbl_dialogo);
+    datos_pestaña4.imagen = dino_imag;
+    datos_pestaña4.box    = box_rosa;  //este es para que el contenedor se pueda usar para borrarle todo y ponerle la imagen final
+    // 3. Conectar la señal pasando la estructura como el "user_data"
+    g_signal_connect(btn_avanzar, "clicked", G_CALLBACK(on_btn_avanzar_clicked), &datos_pestaña4);
+
 
 	//Conectar la función de dibujo si el widget existe (pestaña de reportes)
     if (grafico) {
@@ -291,7 +321,7 @@ static void activate(GtkApplication *app, gpointer user_data){
 	gtk_notebook_set_tab_label_text(notebook, pag_ventas, "VENTAS");
         gtk_notebook_set_tab_label_text(notebook, pag_inventario, "INVENTARIO");
  	gtk_notebook_set_tab_label_text(notebook, pag_reportes, "REPORTES");
-
+    gtk_notebook_set_tab_label_text(notebook, pag_agradecimientos, "AGRADECIMIENTOS");
 	//se obtienen los objetos para los botones de la pagina de inventarios
 	btn_add = GTK_WIDGET(gtk_builder_get_object(builder, "btn_añadir_nuevo"));
 	btn_del = GTK_WIDGET(gtk_builder_get_object(builder, "btn_eliminar"));
@@ -342,6 +372,8 @@ static void activate(GtkApplication *app, gpointer user_data){
         g_warning("No se encontró el objeto 'cv_inventario' en el archivo .ui");
     }
 
+//definir ID para gtk
+gtk_window_set_icon_name(GTK_WINDOW(window), "besto.team.struct");
 
 	//mostrar la ventana
 	gtk_window_present(GTK_WINDOW(window));
@@ -380,8 +412,8 @@ static void estilos(){
 	//crear proveedor de css
 	GtkCssProvider *provider = gtk_css_provider_new();
 
-	//cargar el archivo
-	gtk_css_provider_load_from_path(provider, "styles.css");
+	//cargar el archivo usando el GResource
+gtk_css_provider_load_from_resource(provider, "/besto/team/struct/styles.css");
 
 	//obtener la pantalla actual
 	GdkDisplay *display = gdk_display_get_default();
@@ -410,7 +442,7 @@ void on_btn_abrir_buscador_clicked(GtkButton *btn, gpointer user_data) {
     GtkWidget *entry_busqueda;
     GtkColumnView *cv;
 
-    builder = gtk_builder_new_from_file("search_product.ui");
+    builder = gtk_builder_new_from_resource("/besto/team/struct/search_product.ui");
     search_window = GTK_WIDGET(gtk_builder_get_object(builder, "search_window"));
 
     //obtiene el widget para cancelar el añadir
@@ -948,4 +980,66 @@ static void draw_func_ventas(GtkDrawingArea *area, cairo_t *cr,
             cairo_show_text(cr, monto_str);
         }
     }
+}
+void on_btn_avanzar_clicked(GtkButton *btn, gpointer user_data) {
+    ElementosDialogo *datos = (ElementosDialogo *)user_data;
+    
+    // Un contador estático que recuerda en qué clic vamos (empieza en 1)
+    static int escena_actual = 1;
+
+    // Listas con los recursos en orden (puedes meter todas las que quieras)
+    // Escena 0 -> El estado inicial que ya tienes en pantalla.
+    // Escena 1 -> Lo que pasa en el primer clic.
+    // Escena 2 -> Lo que pasa en el segundo clic, etc.
+    const char *textos[] = {
+        "¡Muchas gracias por habernos enseñado a utilizar punteros!",
+        "Para realizar estos cambios de imagen y texto utilizamos punteros y estructuras!!",
+        "...también un contador para no usar un exceso de if-else!",
+        "También se nos acordó liberar memoria..."
+    };
+
+    const char *imagenes[] = {
+        "/besto/team/struct/assets/Mon1.png", 
+        "/besto/team/struct/assets/Ika2.png",   
+        "/besto/team/struct/assets/Mon2.png",
+        "/besto/team/struct/assets/3aa.png",
+
+        
+    };
+
+    // Calculamos cuántas escenas metimos en total de forma dinámica
+    int total_escenas = sizeof(textos) / sizeof(textos[0]);
+
+    // Si todavía quedan escenas por mostrar
+    if (escena_actual < total_escenas) {
+        //Cambiamos el texto correspondiente a este clic
+        gtk_label_set_text(datos->label, textos[escena_actual]);
+        
+        //Cambiamos la imagen correspondiente a este clic 
+        gtk_picture_set_resource(GTK_PICTURE(datos->imagen), imagenes[escena_actual]);
+        // Avanzamos el contador para el siguiente clic
+        escena_actual++;
+    } else {
+        gtk_widget_set_sensitive(GTK_WIDGET(btn), FALSE);
+        gtk_widget_set_visible(GTK_WIDGET(btn), FALSE); //se oculta para mostrar luego solo la imagen
+        gtk_label_set_text(datos->label, "En nombre del equipo 6 le agradecemos por todo!");
+
+        //se programa un temporizador de 4 segundos y se ejecuta una funcion que cambia el fondo por una imagen
+        g_timeout_add(4000, cambiar_a_escena_final, datos);
+    }
+}
+
+gboolean cambiar_a_escena_final(gpointer user_data) {
+    ElementosDialogo *datos = (ElementosDialogo *)user_data;
+
+    // Ocultamos por completo el cuadro de diálogo rosa y el botón
+    gtk_widget_set_visible(datos->box, FALSE); 
+    
+    //Cambiamos la imagen de Monika por la del salón del espacio
+     gtk_picture_set_resource(GTK_PICTURE(datos->imagen), "/besto/team/struct/assets/10.png");
+   // Ajustamos la imagen para que se expanda si es necesario
+    gtk_widget_set_vexpand(GTK_WIDGET(datos->imagen), TRUE);
+    gtk_widget_set_hexpand(GTK_WIDGET(datos->imagen), TRUE);
+
+    return G_SOURCE_REMOVE; // Detiene el temporizador para que no se repita
 }

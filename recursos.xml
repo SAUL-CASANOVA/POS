@@ -2,5 +2,21 @@
 <gresources>
   <gresource prefix="/besto/team/struct">
    <file>assets/icons8-doki-doki.png</file>
-  </gresource>
+    <file>assets/3aa.png</file>
+    <file>assets/10.png</file>
+    <file>assets/Ika2.png</file>
+    <file>assets/Mon1.png</file>
+    <file>assets/Mon2.png</file>
+
+    <file>assets/dino.png</file>
+    <file>assets/suelo.png</file>
+    <file>assets/nube.png</file>
+    <file>assets/cactus1.png</file>
+    <file>assets/cactus2.png</file>
+
+
+   <file>pos_ALPS.ui</file>	
+   <file>styles.css</file>
+   <file>search_product.ui</file>
+ </gresource>
 </gresources>

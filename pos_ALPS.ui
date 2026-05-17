@@ -308,21 +308,38 @@ frame-resumen</property>
         <child>
           <object class="GtkBox" id="box_juego">
             <property name="hexpand">True</property>
+            <property name="vexpand">True</property>
             <child>
               <object class="GtkBox">
                 <property name="hexpand">True</property>
-                <property name="margin-bottom">15</property>
-                <property name="margin-end">15</property>
-                <property name="margin-start">15</property>
                 <property name="margin-top">15</property>
+                <property name="orientation">vertical</property>
+                <property name="spacing">15</property>
+                <property name="vexpand">True</property>
                 <child>
-                  <object class="GtkImage" id="dino">
-                    <property name="file">assets/suelo.png</property>
-                    <property name="height-request">50</property>
+                  <object class="GtkPicture" id="dino"/>
+                </child>
+                <child>
+                  <object class="GtkBox" id="box_dialogo">
+                    <property name="css-classes">cuadro-dialogo</property>
                     <property name="hexpand">True</property>
-                    <property name="margin-bottom">15</property>
                     <property name="vexpand">True</property>
-                    <property name="width-request">600</property>
+                    <child>
+                      <object class="GtkLabel" id="lbl_dialogo">
+                        <property name="css-classes">texto-dialogo</property>
+                        <property name="hexpand">True</property>
+                        <property name="label">¡Muchas gracias por habernos enseñado a utilizar punteros!</property>
+                        <property name="vexpand">True</property>
+                        <property name="wrap">True</property>
+                      </object>
+                    </child>
+                  </object>
+                </child>
+                <child>
+                  <object class="GtkButton" id="btn_avanzar">
+                    <property name="css-classes">boton-dialogo</property>
+                    <property name="halign">end</property>
+                    <property name="label">NEXT</property>
                   </object>
                 </child>
               </object>
